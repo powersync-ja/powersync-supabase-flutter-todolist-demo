@@ -29,7 +29,7 @@ class TodoListPage extends StatelessWidget {
       onPressed: () {
         _showAddDialog(context, list);
       },
-      tooltip: 'Add',
+      tooltip: 'Add Item',
       child: const Icon(Icons.add),
     );
 

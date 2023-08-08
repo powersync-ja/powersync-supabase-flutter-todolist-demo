@@ -48,7 +48,7 @@ class _ListItemDialogState extends State<ListItemDialog> {
           },
         ),
         ElevatedButton(
-          child: const Text('Add'),
+          child: const Text('Create'),
           onPressed: () async {
             Navigator.of(context).pop();
             await add();

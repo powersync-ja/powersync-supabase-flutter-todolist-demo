@@ -17,26 +17,43 @@ class ListItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-        onTap: () {
-          var navigator = Navigator.of(context);
+    viewList() {
+      var navigator = Navigator.of(context);
 
-          navigator.push(MaterialPageRoute(
-              builder: (context) => TodoListPage(list: list)));
-        },
-        title: Row(
-          children: <Widget>[
-            Expanded(child: Text(list.name)),
-            IconButton(
-              iconSize: 30,
-              icon: const Icon(
-                Icons.delete,
-                color: Colors.red,
+      navigator.push(
+          MaterialPageRoute(builder: (context) => TodoListPage(list: list)));
+    }
+
+    final subtext =
+        '${list.pendingCount} pending, ${list.completedCount} completed';
+
+    return Card(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+              onTap: viewList,
+              leading: const Icon(Icons.list),
+              title: Text(list.name),
+              subtitle: Text(subtext)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              IconButton(
+                iconSize: 30,
+                icon: const Icon(
+                  Icons.delete,
+                  color: Colors.red,
+                ),
+                tooltip: 'Delete List',
+                alignment: Alignment.centerRight,
+                onPressed: delete,
               ),
-              alignment: Alignment.centerRight,
-              onPressed: delete,
-            )
-          ],
-        ));
+              const SizedBox(width: 8),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
