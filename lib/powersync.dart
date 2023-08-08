@@ -23,11 +23,13 @@ final List<RegExp> fatalResponseCodes = [
   RegExp(r'^42501$'),
 ];
 
+/// Use Supabase for authentication and data upload.
 class SupabaseConnector extends PowerSyncBackendConnector {
   PowerSyncDatabase db;
 
   SupabaseConnector(this.db);
 
+  /// Get a Supabase token to authenticate against the PowerSync instance.
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
     // Use Supabase token for PowerSync
@@ -36,7 +38,8 @@ class SupabaseConnector extends PowerSyncBackendConnector {
       // Not logged in
       return null;
     }
-    // Force session refresh
+
+    // Force session refresh.
     final authResponse = await Supabase.instance.client.auth.refreshSession();
     final session = authResponse.session;
     if (session == null) {
@@ -44,16 +47,22 @@ class SupabaseConnector extends PowerSyncBackendConnector {
       return null;
     }
 
+    // Use the access token to authenticate against PowerSync
     final token = session.accessToken;
+
+    // userId and expiresAt are for debugging purposes only
     final userId = session.user.id;
-    const endpoint = AppConfig.powersyncUrl;
     final expiresAt = session.expiresAt == null
         ? null
         : DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000);
     return PowerSyncCredentials(
-        endpoint: endpoint, token: token, userId: userId, expiresAt: expiresAt);
+        endpoint: AppConfig.powersyncUrl,
+        token: token,
+        userId: userId,
+        expiresAt: expiresAt);
   }
 
+  // Upload pending changes to Supabase.
   @override
   Future<void> uploadData(PowerSyncDatabase database) async {
     // This function is called whenever there is data to upload, whether the
@@ -94,11 +103,12 @@ class SupabaseConnector extends PowerSyncBackendConnector {
         ///
         /// Note that these errors typically indicate a bug in the application.
         /// If protecting against data loss is important, save the failing records
-        /// elsewhere instead of discarding, or notify the user.
+        /// elsewhere instead of discarding, and/or notify the user.
         log.severe('Data upload error - discarding $lastOp', e);
         await transaction.complete();
       } else {
-        // Error may be retryable - e.g. network error or temporary server error
+        // Error may be retryable - e.g. network error or temporary server error.
+        // Throwing an error here causes this call to be retried after a delay.
         rethrow;
       }
     }
@@ -112,6 +122,7 @@ bool isLoggedIn() {
   return Supabase.instance.client.auth.currentSession?.accessToken != null;
 }
 
+/// id of the user currently logged in
 String? getUserId() {
   return Supabase.instance.client.auth.currentSession?.user.id;
 }
@@ -137,15 +148,16 @@ Future<void> openDatabase() async {
   Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
     final AuthChangeEvent event = data.event;
     if (event == AuthChangeEvent.signedIn) {
+      // Connect to PowerSync when the user is signed in
       db.connect(connector: SupabaseConnector(db));
     } else if (event == AuthChangeEvent.signedOut) {
-      /// Implicit sign out - disconnect, but don't delete data
+      // Implicit sign out - disconnect, but don't delete data
       await db.disconnect();
     }
   });
 }
 
-/// Explicit sign out - clear database and log out
+/// Explicit sign out - clear database and log out.
 Future<void> logout() async {
   await Supabase.instance.client.auth.signOut();
   await db.disconnectedAndClear();

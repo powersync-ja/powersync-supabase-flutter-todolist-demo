@@ -10,19 +10,9 @@ const schema = Schema(([
     Column.text('created_by'),
     Column.text('completed_by'),
   ], indexes: [
+    // Index to allow efficient lookup within a list
     Index('list', [IndexedColumn('list_id')])
   ]),
-  Table('lists', [
-    Column.text('created_at'),
-    Column.text('name'),
-    Column.text('owner_id')
-  ]),
-
-  // Local-only table to store session credentials.
-  // Note: This stores the credentials in plaintext, used for simplicity in the demo.
-  // flutter_secure_storage may be a better option for storing sensitive credentials.
-  Table.localOnly(
-    'credentials',
-    [Column.text('data')],
-  )
+  Table('lists',
+      [Column.text('created_at'), Column.text('name'), Column.text('owner_id')])
 ]));
