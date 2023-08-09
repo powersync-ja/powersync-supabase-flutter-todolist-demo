@@ -41,6 +41,7 @@ class TodoItemWidget extends StatelessWidget {
               ),
               alignment: Alignment.centerRight,
               onPressed: todo.delete,
+              tooltip: 'Delete Item',
             )
           ],
         ));

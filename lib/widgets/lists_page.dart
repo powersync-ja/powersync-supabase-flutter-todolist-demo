@@ -28,12 +28,12 @@ class ListsPage extends StatelessWidget {
       onPressed: () {
         _showAddDialog(context);
       },
-      tooltip: 'Add',
+      tooltip: 'Create List',
       child: const Icon(Icons.add),
     );
 
     final page = MyHomePage(
-      title: 'Todo Items',
+      title: 'Todo Lists',
       content: content,
       floatingActionButton: button,
     );
@@ -59,7 +59,7 @@ class _ListsWidgetState extends State<ListsWidget> {
   @override
   void initState() {
     super.initState();
-    final stream = TodoList.watchLists();
+    final stream = TodoList.watchListsWithStats();
     _subscription = stream.listen((data) {
       if (!mounted) {
         return;
