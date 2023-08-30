@@ -1,11 +1,12 @@
 // This file performs setup of the PowerSync database
+import 'dart:io';
+
 import 'package:logging/logging.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:powersync/powersync.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import './app_config.dart';
 import './models/schema.dart';
 import './supabase.dart';
 
@@ -32,34 +33,22 @@ class SupabaseConnector extends PowerSyncBackendConnector {
   /// Get a Supabase token to authenticate against the PowerSync instance.
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
-    // Use Supabase token for PowerSync
-    final existingSession = Supabase.instance.client.auth.currentSession;
-    if (existingSession?.accessToken == null) {
-      // Not logged in
-      return null;
+    // Get PowerSync token using a Supabase edge function.
+    // This same approach could be used for anonymous users.
+    final authResponse = await Supabase.instance.client.functions
+        .invoke('powersync-auth', method: HttpMethod.get);
+    if (authResponse.status != 200) {
+      throw HttpException(
+          "Failed to get PowerSync Token, code=${authResponse.status}");
     }
 
-    // Force session refresh.
-    final authResponse = await Supabase.instance.client.auth.refreshSession();
-    final session = authResponse.session;
-    if (session == null) {
-      // Probably shouldn't happen
-      return null;
-    }
+    Map<String, dynamic> data = authResponse.data;
+    // The token.
+    String token = data['token'];
+    // Use the PowerSync URL from the response instead of hardcoding.
+    String powersyncUrl = data['powersync_url'];
 
-    // Use the access token to authenticate against PowerSync
-    final token = session.accessToken;
-
-    // userId and expiresAt are for debugging purposes only
-    final userId = session.user.id;
-    final expiresAt = session.expiresAt == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(session.expiresAt! * 1000);
-    return PowerSyncCredentials(
-        endpoint: AppConfig.powersyncUrl,
-        token: token,
-        userId: userId,
-        expiresAt: expiresAt);
+    return PowerSyncCredentials(endpoint: powersyncUrl, token: token);
   }
 
   // Upload pending changes to Supabase.
