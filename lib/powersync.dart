@@ -34,9 +34,9 @@ class SupabaseConnector extends PowerSyncBackendConnector {
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
     // Get PowerSync token using a Supabase edge function.
-    // This same approach could be used for anonymous users.
+    // This can work even if the user is not signed in if the function allows it.
     final authResponse = await Supabase.instance.client.functions
-        .invoke('powersync-auth', method: HttpMethod.get);
+        .invoke('powersync-auth-anonymous', method: HttpMethod.get);
     if (authResponse.status != 200) {
       throw HttpException(
           "Failed to get PowerSync Token, code=${authResponse.status}");
@@ -128,26 +128,5 @@ Future<void> openDatabase() async {
 
   await loadSupabase();
 
-  if (isLoggedIn()) {
-    // If the user is already logged in, connect immediately.
-    // Otherwise, connect once logged in.
-    db.connect(connector: SupabaseConnector(db));
-  }
-
-  Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-    final AuthChangeEvent event = data.event;
-    if (event == AuthChangeEvent.signedIn) {
-      // Connect to PowerSync when the user is signed in
-      db.connect(connector: SupabaseConnector(db));
-    } else if (event == AuthChangeEvent.signedOut) {
-      // Implicit sign out - disconnect, but don't delete data
-      await db.disconnect();
-    }
-  });
-}
-
-/// Explicit sign out - clear database and log out.
-Future<void> logout() async {
-  await Supabase.instance.client.auth.signOut();
-  await db.disconnectedAndClear();
+  db.connect(connector: SupabaseConnector(db));
 }

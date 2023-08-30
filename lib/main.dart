@@ -4,9 +4,7 @@ import 'package:logging/logging.dart';
 
 import './powersync.dart';
 import './widgets/lists_page.dart';
-import './widgets/login_page.dart';
 import './widgets/query_widget.dart';
-import './widgets/signup_page.dart';
 import './widgets/status_app_bar.dart';
 
 void main() async {
@@ -29,8 +27,8 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
-  final loggedIn = isLoggedIn();
-  runApp(MyApp(loggedIn: loggedIn));
+
+  runApp(const MyApp());
 }
 
 const defaultQuery = 'SELECT * from todos';
@@ -42,14 +40,8 @@ const sqlConsolePage = Scaffold(
     appBar: StatusAppBar(title: 'SQL Console'),
     body: QueryWidget(defaultQuery: defaultQuery));
 
-const loginPage = LoginPage();
-
-const signupPage = SignupPage();
-
 class MyApp extends StatelessWidget {
-  final bool loggedIn;
-
-  const MyApp({super.key, required this.loggedIn});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +50,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        home: loggedIn ? homePage : loginPage);
+        home: homePage);
   }
 }
 
@@ -101,18 +93,6 @@ class MyHomePage extends StatelessWidget {
 
                 navigator.push(MaterialPageRoute(
                   builder: (context) => sqlConsolePage,
-                ));
-              },
-            ),
-            ListTile(
-              title: const Text('Sign Out'),
-              onTap: () async {
-                var navigator = Navigator.of(context);
-                navigator.pop();
-                await logout();
-
-                navigator.pushReplacement(MaterialPageRoute(
-                  builder: (context) => loginPage,
                 ));
               },
             ),

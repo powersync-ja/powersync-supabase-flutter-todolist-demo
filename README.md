@@ -5,8 +5,13 @@
 Demo app demonstrating use of the PowerSync SDK for Flutter together with Supabase. For a step-by-step guide, see [here](https://docs.powersync.co/integration-guides/supabase).
 
 > [!NOTE]
-> This branch differs from the main one by using a Supabase Edge Function for authentication.
+> This branch differs from the main one by using a Supabase Edge Function for
+> PowerSync authentication of anonymous users.
+>
 > An example implementation of this function is in the [powersync-jwks-example](https://github.com/journeyapps/powersync-jwks-example/) repo.
+>
+> The app and sync rules are not conceptually designed for anonymous users,
+> so the demo app is not fully functioning.
 
 # Running the app
 
