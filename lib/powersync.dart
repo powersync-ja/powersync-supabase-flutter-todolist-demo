@@ -33,17 +33,9 @@ class SupabaseConnector extends PowerSyncBackendConnector {
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
     // Use Supabase token for PowerSync
-    final existingSession = Supabase.instance.client.auth.currentSession;
-    if (existingSession?.accessToken == null) {
-      // Not logged in
-      return null;
-    }
-
-    // Force session refresh.
-    final authResponse = await Supabase.instance.client.auth.refreshSession();
-    final session = authResponse.session;
+    final session = Supabase.instance.client.auth.currentSession;
     if (session == null) {
-      // Probably shouldn't happen
+      // Not logged in
       return null;
     }
 
@@ -139,20 +131,28 @@ Future<void> openDatabase() async {
 
   await loadSupabase();
 
+  SupabaseConnector? currentConnector;
+
   if (isLoggedIn()) {
     // If the user is already logged in, connect immediately.
     // Otherwise, connect once logged in.
-    db.connect(connector: SupabaseConnector(db));
+    currentConnector = SupabaseConnector(db);
+    db.connect(connector: currentConnector);
   }
 
   Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
     final AuthChangeEvent event = data.event;
     if (event == AuthChangeEvent.signedIn) {
       // Connect to PowerSync when the user is signed in
-      db.connect(connector: SupabaseConnector(db));
+      currentConnector = SupabaseConnector(db);
+      db.connect(connector: currentConnector!);
     } else if (event == AuthChangeEvent.signedOut) {
       // Implicit sign out - disconnect, but don't delete data
+      currentConnector = null;
       await db.disconnect();
+    } else if (event == AuthChangeEvent.tokenRefreshed) {
+      // Supabase token refreshed - trigger token refresh for PowerSync.
+      currentConnector?.prefetchCredentials();
     }
   });
 }
