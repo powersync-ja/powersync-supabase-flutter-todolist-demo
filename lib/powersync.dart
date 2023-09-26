@@ -54,6 +54,14 @@ class SupabaseConnector extends PowerSyncBackendConnector {
         expiresAt: expiresAt);
   }
 
+  @override
+  void invalidateCredentials() {
+    // Trigger a session refresh if auth fails on PowerSync
+    // This could happen if the device was offline for a while and the session
+    // expired, and nothing else has refreshed it in the meantime.
+    Supabase.instance.client.auth.refreshSession().ignore();
+  }
+
   // Upload pending changes to Supabase.
   @override
   Future<void> uploadData(PowerSyncDatabase database) async {
