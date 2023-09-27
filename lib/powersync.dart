@@ -27,11 +27,16 @@ final List<RegExp> fatalResponseCodes = [
 class SupabaseConnector extends PowerSyncBackendConnector {
   PowerSyncDatabase db;
 
+  Future<void>? _refreshFuture;
+
   SupabaseConnector(this.db);
 
   /// Get a Supabase token to authenticate against the PowerSync instance.
   @override
   Future<PowerSyncCredentials?> fetchCredentials() async {
+    // Wait for pending session refresh if any
+    await _refreshFuture;
+
     // Use Supabase token for PowerSync
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) {
@@ -56,10 +61,21 @@ class SupabaseConnector extends PowerSyncBackendConnector {
 
   @override
   void invalidateCredentials() {
-    // Trigger a session refresh if auth fails on PowerSync
+    // Trigger a session refresh if auth fails on PowerSync.
+    // Generally, sessions should be refreshed automatically by Supabase.
+    // However, in some cases it can be a while before the session refresh is
+    // retried. We attempt to trigger the refresh as soon as we get an auth
+    // failure on PowerSync.
+    //
     // This could happen if the device was offline for a while and the session
-    // expired, and nothing else has refreshed it in the meantime.
-    Supabase.instance.client.auth.refreshSession().ignore();
+    // expired, and nothing else attempt to use the session it in the meantime.
+    //
+    // Timeout the refresh call to avoid waiting for long retries,
+    // and ignore any errors. Errors will surface as expired tokens.
+    _refreshFuture = Supabase.instance.client.auth
+        .refreshSession()
+        .timeout(const Duration(seconds: 5))
+        .then((response) => null, onError: (error) => null);
   }
 
   // Upload pending changes to Supabase.
