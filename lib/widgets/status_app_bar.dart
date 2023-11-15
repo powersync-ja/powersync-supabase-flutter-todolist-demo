@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:powersync/powersync.dart';
+import 'package:powersync_flutter_demo/widgets/custom_search_delegate.dart';
 import '../powersync.dart';
 
 class StatusAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -53,6 +54,12 @@ class _StatusAppBarState extends State<StatusAppBar> {
     return AppBar(
       title: Text(widget.title),
       actions: <Widget>[
+        IconButton(
+          onPressed: () {
+            showSearch(context: context, delegate: CustomSearchDelegate());
+          },
+          icon: const Icon(Icons.search),
+        ),
         _connectionState.connected ? connectedIcon : disconnectedIcon
       ],
     );

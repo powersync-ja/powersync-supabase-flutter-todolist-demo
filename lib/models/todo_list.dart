@@ -80,6 +80,13 @@ ORDER BY created_at
     await db.execute('DELETE FROM lists WHERE id = ?', [id]);
   }
 
+  /// Search this list using Full Text Search (fts_content) table.
+  static Future<List> search(String searchTerm) async {
+    return await db.execute(
+        'SELECT * FROM fts_content WHERE fts_content MATCH ? ORDER BY rank',
+        [searchTerm]);
+  }
+
   /// Add a new todo item to this list.
   Future<TodoItem> add(String description) async {
     final results = await db.execute('''INSERT INTO

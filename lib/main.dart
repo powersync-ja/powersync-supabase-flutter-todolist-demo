@@ -29,6 +29,24 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
+
+  // TODO: This will need to be moved to the initial DB setup
+  // Comment out after you've run the app once otherwise you will get an error
+  // for duplicate tables and triggers
+  await db.execute(
+      'CREATE VIRTUAL TABLE fts_content USING fts5(id UNINDEXED, name, created_at);');
+
+  await db.execute('''
+      CREATE TRIGGER fts_insert_trigger INSTEAD OF INSERT ON lists BEGIN
+        INSERT INTO fts_content(id, name, created_at) VALUES (new.id, new.name, new.created_at);
+      END;
+      ''');
+  await db.execute('''
+      CREATE TRIGGER fts_delete_trigger INSTEAD OF DELETE ON lists BEGIN
+        DELETE FROM fts_content WHERE id = old.id;
+      END;
+    ''');
+
   final loggedIn = isLoggedIn();
   runApp(MyApp(loggedIn: loggedIn));
 }
