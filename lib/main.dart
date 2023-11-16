@@ -8,6 +8,7 @@ import './widgets/login_page.dart';
 import './widgets/query_widget.dart';
 import './widgets/signup_page.dart';
 import './widgets/status_app_bar.dart';
+import './migrations/full_text_search_setup.dart';
 
 void main() async {
   // Log info from PowerSync
@@ -29,19 +30,12 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
-  await db.execute(
-      'CREATE VIRTUAL TABLE IF NOT EXISTS fts_content USING fts5(id UNINDEXED, name, created_at);');
-
-  await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS fts_insert_trigger INSTEAD OF INSERT ON lists BEGIN
-        INSERT INTO fts_content(id, name, created_at) VALUES (new.id, new.name, new.created_at);
-      END;
-      ''');
-  await db.execute('''
-      CREATE TRIGGER IF NOT EXISTS fts_delete_trigger INSTEAD OF DELETE ON lists BEGIN
-        DELETE FROM fts_content WHERE id = old.id;
-      END;
-    ''');
+  // This is where you can add more migrations to generate FTS tables that correspond to the tables in your schema
+  // and populate them with the data you would like to search on
+  migrations
+    ..add(createFtsMigration(1, 'lists', ['name']))
+    ..add(createFtsMigration(2, 'todos', ['description', 'list_id']));
+  await migrations.migrate(db);
 
   final loggedIn = isLoggedIn();
   runApp(MyApp(loggedIn: loggedIn));

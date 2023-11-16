@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:powersync_flutter_demo/models/todo_item.dart';
 import 'package:powersync_flutter_demo/models/todo_list.dart';
 
 import './todo_list_page.dart';
@@ -57,6 +58,8 @@ class CustomSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    NavigatorState navigator = Navigator.of(context);
+
     return FutureBuilder<List>(
       future: _search(),
       builder: (context, snapshot) {
@@ -67,7 +70,6 @@ class CustomSearchDelegate extends SearchDelegate {
                 // I ran into typing issues so needed to do a null check
                 title: Text(snapshot.data?[index]['name'] ?? ''),
                 onTap: () {
-                  var navigator = Navigator.of(context);
                   navigator.push(MaterialPageRoute(
                       builder: (context) => TodoListPage(
                           list: _convertToTodoList(snapshot.data![index]))));
@@ -90,10 +92,22 @@ class CustomSearchDelegate extends SearchDelegate {
   }
 
   Future<List> _search() async {
-    List searchResults = await TodoList.search(query);
-    List formattedResults = searchResults
+    List listsSearchResults = await TodoList.search(query);
+    List todoItemsSearchResults = await TodoItem.search(query);
+    List formattedListResults = listsSearchResults
         .map((result) => {"id": result['id'], "name": result['name']})
         .toList();
+    List formattedTodoItemsResults = todoItemsSearchResults
+        .map((result) => {
+              // Do this so the navigation goes to the list page
+              "id": result['list_id'],
+              "name": result['description'],
+            })
+        .toList();
+    List formattedResults = [
+      ...formattedListResults,
+      ...formattedTodoItemsResults
+    ];
     return formattedResults;
   }
 }

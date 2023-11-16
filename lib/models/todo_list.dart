@@ -80,10 +80,10 @@ ORDER BY created_at
     await db.execute('DELETE FROM lists WHERE id = ?', [id]);
   }
 
-  /// Search this list using Full Text Search (fts_content) table.
+  /// Search this list using Full Text Search (fts_lists) table.
   static Future<List> search(String searchTerm) async {
     return await db.execute(
-        'SELECT * FROM fts_content WHERE fts_content MATCH ? ORDER BY rank',
+        'SELECT * FROM fts_lists WHERE fts_lists MATCH ? ORDER BY rank',
         [searchTerm]);
   }
 
