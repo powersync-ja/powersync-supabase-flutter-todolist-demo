@@ -69,10 +69,12 @@ class CustomSearchDelegate extends SearchDelegate {
               return ListTile(
                 // I ran into typing issues so needed to do a null check
                 title: Text(snapshot.data?[index]['name'] ?? ''),
-                onTap: () {
+                onTap: () async {
+                  TodoList list =
+                      await TodoList.find(snapshot.data![index]['id']);
                   navigator.push(MaterialPageRoute(
-                      builder: (context) => TodoListPage(
-                          list: _convertToTodoList(snapshot.data![index]))));
+                    builder: (context) => TodoListPage(list: list),
+                  ));
                 },
               );
             },
@@ -85,10 +87,6 @@ class CustomSearchDelegate extends SearchDelegate {
         }
       },
     );
-  }
-
-  TodoList _convertToTodoList(Map<String, dynamic> data) {
-    return TodoList(id: data['id'], name: data['name']);
   }
 
   Future<List> _search() async {

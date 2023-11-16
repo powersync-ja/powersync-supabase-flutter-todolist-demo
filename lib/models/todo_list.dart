@@ -80,6 +80,12 @@ ORDER BY created_at
     await db.execute('DELETE FROM lists WHERE id = ?', [id]);
   }
 
+  /// Find list item.
+  static Future<TodoList> find(id) async {
+    final results = await db.execute('SELECT * FROM lists WHERE id = ?', [id]);
+    return TodoList.fromRow(results.first);
+  }
+
   /// Search this list using Full Text Search (fts_lists) table.
   static Future<List> search(String searchTerm) async {
     return await db.execute(
