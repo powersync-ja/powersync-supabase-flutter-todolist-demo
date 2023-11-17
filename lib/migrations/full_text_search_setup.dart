@@ -22,24 +22,26 @@ SqliteMigration createFtsMigration(
     ''');
     // Add INSERT, UPDATE and DELETE and triggers to keep fts table in sync with table
     await tx.execute('''
-      CREATE TRIGGER IF NOT EXISTS fts_insert_trigger_$tableName  AFTER INSERT ON $internalName BEGIN
-        INSERT INTO fts_$tableName(id, $stringColumns)
-        VALUES (
-            new.id,
-            ${_generateJsonExtractsForColumns('new.data', columns)}
-        );
+      CREATE TRIGGER IF NOT EXISTS fts_insert_trigger_$tableName  AFTER INSERT ON $internalName
+      WHEN NEW.id NOT IN (SELECT id FROM fts_$tableName)
+      BEGIN
+          INSERT INTO fts_$tableName(id, $stringColumns)
+          VALUES (
+              NEW.id,
+              ${_generateJsonExtractsForColumns('NEW.data', columns)}
+          );
       END;
     ''');
     await tx.execute('''
       CREATE TRIGGER IF NOT EXISTS fts_update_trigger_$tableName AFTER UPDATE ON $internalName BEGIN
         UPDATE fts_$tableName
-        SET ${_generateJsonExtractsForSetOperation('new.data', columns)}
-        WHERE id = new.id;
+        SET ${_generateJsonExtractsForSetOperation('NEW.data', columns)}
+        WHERE id = NEW.id;
       END;
     ''');
     await tx.execute('''
       CREATE TRIGGER IF NOT EXISTS fts_delete_trigger_$tableName  AFTER DELETE ON $internalName BEGIN
-        DELETE FROM fts_$tableName WHERE id = json_extract(old.data, '\$.id');
+        DELETE FROM fts_$tableName WHERE id = json_extract(OLD.data, '\$.id');
       END;
     ''');
   });
