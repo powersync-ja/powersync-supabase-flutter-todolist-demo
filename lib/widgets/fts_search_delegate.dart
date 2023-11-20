@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'package:powersync_flutter_demo/fts_helpers.dart';
+import 'package:powersync_flutter_demo/fts_helpers.dart' as fts_helpers;
 import 'package:powersync_flutter_demo/models/todo_list.dart';
 
 import './todo_list_page.dart';
@@ -89,8 +89,8 @@ class FtsSearchDelegate extends SearchDelegate {
   }
 
   Future<List> _search() async {
-    List listsSearchResults = await FtsHelpers.search(query, 'lists');
-    List todoItemsSearchResults = await FtsHelpers.search(query, 'todos');
+    List listsSearchResults = await fts_helpers.search(query, 'lists');
+    List todoItemsSearchResults = await fts_helpers.search(query, 'todos');
     List formattedListResults = listsSearchResults
         .map((result) => {"id": result['id'], "name": result['name']})
         .toList();
