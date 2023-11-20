@@ -46,23 +46,25 @@ class TodoList {
   static Stream<List<TodoList>> watchListsWithStats() {
     // This query is automatically re-run when data in "lists" or "todos" is modified.
     return db.watch('''
-SELECT
-  *,
-  (SELECT count() FROM todos WHERE list_id = lists.id AND completed = TRUE) as completed_count,
-  (SELECT count() FROM todos WHERE list_id = lists.id AND completed = FALSE) as pending_count
-FROM lists
-ORDER BY created_at
-''').map((results) {
+      SELECT
+        *,
+        (SELECT count() FROM todos WHERE list_id = lists.id AND completed = TRUE) as completed_count,
+        (SELECT count() FROM todos WHERE list_id = lists.id AND completed = FALSE) as pending_count
+      FROM lists
+      ORDER BY created_at
+    ''').map((results) {
       return results.map(TodoList.fromRow).toList(growable: false);
     });
   }
 
   /// Create a new list
   static Future<TodoList> create(String name) async {
-    final results = await db.execute('''INSERT INTO
-           lists(id, created_at, name, owner_id)
-           VALUES(uuid(), datetime(), ?, ?)
-           RETURNING *''', [name, getUserId()]);
+    final results = await db.execute('''
+      INSERT INTO
+        lists(id, created_at, name, owner_id)
+        VALUES(uuid(), datetime(), ?, ?)
+      RETURNING *
+      ''', [name, getUserId()]);
     return TodoList.fromRow(results.first);
   }
 
@@ -86,19 +88,14 @@ ORDER BY created_at
     return TodoList.fromRow(results.first);
   }
 
-  /// Search this list using Full Text Search (fts_lists) table.
-  static Future<List> search(String searchTerm) async {
-    return await db.execute(
-        'SELECT * FROM fts_lists WHERE fts_lists MATCH ? ORDER BY rank',
-        ['$searchTerm*']);
-  }
-
   /// Add a new todo item to this list.
   Future<TodoItem> add(String description) async {
-    final results = await db.execute('''INSERT INTO
-          todos(id, created_at, completed, list_id, description, created_by)
-          VALUES(uuid(), datetime(), FALSE, ?, ?, ?)
-          RETURNING *''', [id, description, getUserId()]);
+    final results = await db.execute('''
+      INSERT INTO
+        todos(id, created_at, completed, list_id, description, created_by)
+        VALUES(uuid(), datetime(), FALSE, ?, ?, ?)
+      RETURNING *
+    ''', [id, description, getUserId()]);
     return TodoItem.fromRow(results.first);
   }
 }

@@ -35,10 +35,4 @@ class TodoItem {
   Future<void> delete() async {
     await db.execute('DELETE FROM todos WHERE id = ?', [id]);
   }
-
-  static Future<List> search(String searchTerm) async {
-    return await db.execute(
-        'SELECT * FROM fts_todos WHERE fts_todos MATCH ? ORDER BY rank',
-        [searchTerm]);
-  }
 }
