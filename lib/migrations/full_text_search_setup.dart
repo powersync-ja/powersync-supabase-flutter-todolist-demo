@@ -3,17 +3,24 @@ import 'package:sqlite_async/sqlite_async.dart';
 
 final migrations = SqliteMigrations();
 
+/// Create a Full Text Search table for the given table and columns
+/// with an option to use a different tokenizer otherwise it defaults
+/// to unicode61. It also creates the triggers that keep the FTS table
+/// and the PowerSync table in sync.
 SqliteMigration createFtsMigration(
-    int migrationIndex, String tableName, List<String> columns) {
+    {required int migrationVersion,
+    required String tableName,
+    required List<String> columns,
+    String tokenizationMethod = 'unicode61'}) {
   String internalName =
       schema.tables.firstWhere((table) => table.name == tableName).internalName;
   String stringColumns = columns.join(', ');
 
-  return SqliteMigration(migrationIndex, (tx) async {
+  return SqliteMigration(migrationVersion, (tx) async {
     // Add FTS table
     await tx.execute('''
       CREATE VIRTUAL TABLE IF NOT EXISTS fts_$tableName
-      USING fts5(id UNINDEXED, $stringColumns, tokenize='porter unicode61');
+      USING fts5(id UNINDEXED, $stringColumns, tokenize='$tokenizationMethod');
     ''');
     // Copy over records already in table
     await tx.execute('''

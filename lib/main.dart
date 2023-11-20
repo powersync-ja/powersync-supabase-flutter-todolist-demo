@@ -33,8 +33,16 @@ void main() async {
   // This is where you can add more migrations to generate FTS tables that correspond to the tables in your schema
   // and populate them with the data you would like to search on
   migrations
-    ..add(createFtsMigration(1, 'lists', ['name']))
-    ..add(createFtsMigration(2, 'todos', ['description', 'list_id']));
+    ..add(createFtsMigration(
+        migrationVersion: 1,
+        tableName: 'lists',
+        columns: ['name'],
+        tokenizationMethod: 'porter unicode61'))
+    ..add(createFtsMigration(
+      migrationVersion: 2,
+      tableName: 'todos',
+      columns: ['description', 'list_id'],
+    ));
   await migrations.migrate(db);
 
   final loggedIn = isLoggedIn();
