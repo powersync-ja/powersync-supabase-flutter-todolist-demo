@@ -13,7 +13,7 @@ SqliteMigration createFtsMigration(
     // Add FTS table
     await tx.execute('''
       CREATE VIRTUAL TABLE IF NOT EXISTS fts_$tableName
-      USING fts5(id UNINDEXED, $stringColumns);
+      USING fts5(id UNINDEXED, $stringColumns, tokenize='porter unicode61');
     ''');
     // Copy over records already in table
     await tx.execute('''

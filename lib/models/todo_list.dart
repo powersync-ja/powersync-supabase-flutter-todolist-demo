@@ -90,7 +90,7 @@ ORDER BY created_at
   static Future<List> search(String searchTerm) async {
     return await db.execute(
         'SELECT * FROM fts_lists WHERE fts_lists MATCH ? ORDER BY rank',
-        [searchTerm]);
+        ['$searchTerm*']);
   }
 
   /// Add a new todo item to this list.
