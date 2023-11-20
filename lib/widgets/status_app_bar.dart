@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:powersync/powersync.dart';
-import 'package:powersync_flutter_demo/widgets/custom_search_delegate.dart';
+import 'package:powersync_flutter_demo/widgets/fts_search_delegate.dart';
 import '../powersync.dart';
 
 class StatusAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -56,7 +56,7 @@ class _StatusAppBarState extends State<StatusAppBar> {
       actions: <Widget>[
         IconButton(
           onPressed: () {
-            showSearch(context: context, delegate: CustomSearchDelegate());
+            showSearch(context: context, delegate: FtsSearchDelegate());
           },
           icon: const Icon(Icons.search),
         ),

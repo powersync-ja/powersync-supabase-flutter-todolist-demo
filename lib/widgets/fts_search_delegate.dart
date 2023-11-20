@@ -7,7 +7,7 @@ import './todo_list_page.dart';
 
 final log = Logger('powersync-supabase');
 
-class CustomSearchDelegate extends SearchDelegate {
+class FtsSearchDelegate extends SearchDelegate {
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
@@ -67,7 +67,6 @@ class CustomSearchDelegate extends SearchDelegate {
           return ListView.builder(
             itemBuilder: (context, index) {
               return ListTile(
-                // I ran into typing issues so needed to do a null check
                 title: Text(snapshot.data?[index]['name'] ?? ''),
                 onTap: () async {
                   TodoList list =
@@ -97,7 +96,7 @@ class CustomSearchDelegate extends SearchDelegate {
         .toList();
     List formattedTodoItemsResults = todoItemsSearchResults
         .map((result) => {
-              // Do this so the navigation goes to the list page
+              // Use list_id so the navigation goes to the list page
               "id": result['list_id'],
               "name": result['description'],
             })
