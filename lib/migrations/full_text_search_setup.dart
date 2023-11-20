@@ -1,4 +1,5 @@
 import '../models/schema.dart';
+import 'helpers.dart';
 import 'package:sqlite_async/sqlite_async.dart';
 
 final migrations = SqliteMigrations();
@@ -25,7 +26,7 @@ SqliteMigration createFtsMigration(
     // Copy over records already in table
     await tx.execute('''
       INSERT INTO fts_$tableName(id, $stringColumns)
-      SELECT id, ${_generateJsonExtractsForColumns('data', columns)} FROM $internalName;
+      SELECT id, ${generateJsonExtracts(ExtractType.columnOnly, 'data', columns)} FROM $internalName;
     ''');
     // Add INSERT, UPDATE and DELETE and triggers to keep fts table in sync with table
     await tx.execute('''
@@ -35,14 +36,14 @@ SqliteMigration createFtsMigration(
           INSERT INTO fts_$tableName(id, $stringColumns)
           VALUES (
               NEW.id,
-              ${_generateJsonExtractsForColumns('NEW.data', columns)}
+              ${generateJsonExtracts(ExtractType.columnOnly, 'NEW.data', columns)}
           );
       END;
     ''');
     await tx.execute('''
       CREATE TRIGGER IF NOT EXISTS fts_update_trigger_$tableName AFTER UPDATE ON $internalName BEGIN
         UPDATE fts_$tableName
-        SET ${_generateJsonExtractsForSetOperation('NEW.data', columns)}
+        SET ${generateJsonExtracts(ExtractType.columnInOperation, 'NEW.data', columns)}
         WHERE id = NEW.id;
       END;
     ''');
@@ -52,32 +53,4 @@ SqliteMigration createFtsMigration(
       END;
     ''');
   });
-}
-
-String _generateJsonExtractsForColumns(
-    String jsonColumnName, List<String> columns) {
-  String data = '';
-  for (var i = 0; i < columns.length; i++) {
-    data += 'json_extract($jsonColumnName, \'\$.${columns[i]}\')';
-    if (columns[i] != columns.last) {
-      data += ', ';
-    }
-  }
-
-  return data;
-}
-
-String _generateJsonExtractsForSetOperation(
-    String jsonColumnName, List<String> columns) {
-  String data = '';
-
-  for (var i = 0; i < columns.length; i++) {
-    data +=
-        '${columns[i]} = json_extract($jsonColumnName, \'\$.${columns[i]}\')';
-    if (columns[i] != columns.last) {
-      data += ', ';
-    }
-  }
-
-  return data;
 }
