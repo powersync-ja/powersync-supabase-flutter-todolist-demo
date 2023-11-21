@@ -8,7 +8,7 @@ import './widgets/login_page.dart';
 import './widgets/query_widget.dart';
 import './widgets/signup_page.dart';
 import './widgets/status_app_bar.dart';
-import './migrations/full_text_search_setup.dart';
+import 'migrations/fts_setup.dart';
 
 void main() async {
   // Log info from PowerSync
