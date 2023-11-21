@@ -30,6 +30,7 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
+  db.execute('PRAGMA recursive_triggers = TRUE');
   // This is where you can add more migrations to generate FTS tables that correspond to the tables in your schema
   // and populate them with the data you would like to search on
   migrations
