@@ -3,6 +3,8 @@ import 'package:logging/logging.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:powersync/powersync.dart';
+import 'package:sqlite3/sqlite3.dart' as sqlite;
+import 'package:sqlite_async/sqlite_async.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import './app_config.dart';
@@ -145,12 +147,26 @@ String? getUserId() {
 
 Future<String> getDatabasePath() async {
   final dir = await getApplicationSupportDirectory();
+  print('dir: $dir');
   return join(dir.path, 'powersync-demo.db');
+}
+
+class CustomOpenFactory extends PowerSyncOpenFactory {
+  CustomOpenFactory({required super.path});
+
+  @override
+  sqlite.Database open(SqliteOpenOptions options) {
+    final db = super.open(options);
+    db.execute('PRAGMA recursive_triggers = TRUE');
+    return db;
+  }
 }
 
 Future<void> openDatabase() async {
   // Open the local database
-  db = PowerSyncDatabase(schema: schema, path: await getDatabasePath());
+  db = PowerSyncDatabase.withFactory(
+      CustomOpenFactory(path: await getDatabasePath()),
+      schema: schema);
   await db.initialize();
 
   await loadSupabase();
