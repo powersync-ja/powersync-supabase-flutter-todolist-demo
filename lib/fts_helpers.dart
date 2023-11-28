@@ -11,7 +11,7 @@ String _createSearchTermWithOptions(String searchTerm) {
 /// Search the FTS table for the given searchTerm
 Future<List> search(String searchTerm, String tableName) async {
   String searchTermWithOptions = _createSearchTermWithOptions(searchTerm);
-  return await db.execute(
+  return await db.getAll(
       'SELECT * FROM fts_$tableName WHERE fts_$tableName MATCH ? ORDER BY rank',
       [searchTermWithOptions]);
 }
