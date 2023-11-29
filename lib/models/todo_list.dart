@@ -84,8 +84,8 @@ class TodoList {
 
   /// Find list item.
   static Future<TodoList> find(id) async {
-    final results = await db.getAll('SELECT * FROM lists WHERE id = ?', [id]);
-    return TodoList.fromRow(results.first);
+    final results = await db.get('SELECT * FROM lists WHERE id = ?', [id]);
+    return TodoList.fromRow(results);
   }
 
   /// Add a new todo item to this list.
