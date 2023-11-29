@@ -8,7 +8,6 @@ import './widgets/login_page.dart';
 import './widgets/query_widget.dart';
 import './widgets/signup_page.dart';
 import './widgets/status_app_bar.dart';
-import 'migrations/fts_setup.dart';
 
 void main() async {
   // Log info from PowerSync
@@ -30,9 +29,6 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
-  // Demo using SQLite Full-Text Search with PowerSync.
-  // See https://docs.powersync.com/usage-examples/full-text-search for more details
-  await configureFts(db);
 
   final loggedIn = isLoggedIn();
   runApp(MyApp(loggedIn: loggedIn));
