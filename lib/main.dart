@@ -29,6 +29,7 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
+
   final loggedIn = isLoggedIn();
   runApp(MyApp(loggedIn: loggedIn));
 }

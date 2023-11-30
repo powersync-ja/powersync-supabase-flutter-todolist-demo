@@ -1,7 +1,7 @@
 import '../powersync.dart';
 import 'package:powersync/sqlite3.dart' as sqlite;
 
-/// TodoList represents a result row of a query on "todos".
+/// TodoItem represents a result row of a query on "todos".
 ///
 /// This class is immutable - methods on this class do not modify the instance
 /// directly. Instead, watch or re-query the data to get the updated item.
