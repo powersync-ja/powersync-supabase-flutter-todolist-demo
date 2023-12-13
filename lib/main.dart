@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:powersync_flutter_demo/app_config.dart';
+import 'package:powersync_flutter_demo/attachments/camera_helpers.dart';
+import 'package:powersync_flutter_demo/attachments/local_storage_adapter.dart';
+import 'package:powersync_flutter_demo/attachments/queue.dart';
+import 'package:powersync_flutter_demo/attachments/remote_storage_adapter.dart';
 
 import './powersync.dart';
 import './widgets/lists_page.dart';
@@ -29,6 +34,15 @@ void main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); //required to get sqlite filepath from path_provider before UI has initialized
   await openDatabase();
+
+  if (AppConfig.supabaseStorageBucket.isNotEmpty) {
+    final localStorage = LocalStorageAdapter();
+    final remoteStorage = SupabaseStorageAdapter();
+    attachmentQueue = PhotoAttachmentQueue(db, localStorage, remoteStorage);
+    await attachmentQueue.init();
+  }
+
+  camera = await setupCamera();
 
   final loggedIn = isLoggedIn();
   runApp(MyApp(loggedIn: loggedIn));
