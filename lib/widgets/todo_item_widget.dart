@@ -45,12 +45,10 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
 
   Future<void> deleteTodo(TodoItem todo) async {
     if (todo.photoId != null) {
-      Attachment? attachment =
-          await attachmentQueue.attachmentsService.getAttachment(todo.photoId!);
-      if (attachment != null) {
-        await attachmentQueue.attachmentsService.updateAttachment(
-            attachment.copyWith(state: AttachmentState.queuedDelete.index));
-      }
+      attachmentQueue.attachmentsService.saveRecord(Attachment(
+          id: todo.photoId!,
+          filename: '${todo.photoId}.jpg',
+          state: AttachmentState.queuedDelete.index));
     }
     await todo.delete();
   }

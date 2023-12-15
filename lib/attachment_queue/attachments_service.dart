@@ -109,15 +109,13 @@ class AttachmentsService {
     return updatedRecord;
   }
 
-  Future<List<String>> getAttachmentIdsNotInQueue(List<String> ids) async {
-    ResultSet results = await db.getAll(
-        'SELECT id FROM $table WHERE id NOT IN (${List.filled(ids.length, '?').join(', ')})',
-        ids);
+  Future<List<String>> getAttachmentIds() async {
+    ResultSet results =
+        await db.getAll('SELECT id FROM $table WHERE id IS NOT NULL');
 
-    List<String> idsNotInQueue =
-        results.map((row) => row['id'] as String).toList();
+    List<String> ids = results.map((row) => row['id'] as String).toList();
 
-    return idsNotInQueue;
+    return ids;
   }
 
   Future<void> clearQueue() async {

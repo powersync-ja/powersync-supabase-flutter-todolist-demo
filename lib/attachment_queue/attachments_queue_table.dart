@@ -66,12 +66,11 @@ enum AttachmentState {
 
 class AttachmentsQueueTable extends Table {
   AttachmentsQueueTable(
-      {String? name,
-      List<Column> additionalColumns = const [],
+      {List<Column> additionalColumns = const [],
       List<Index> indexes = const [],
       String? viewName})
       : super.localOnly(
-            name ?? ATTACHMENTS_QUEUE_TABLE,
+            ATTACHMENTS_QUEUE_TABLE,
             [
               const Column.text('filename'),
               const Column.text('local_uri'),

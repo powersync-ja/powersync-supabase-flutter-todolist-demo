@@ -25,21 +25,6 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     await super.init();
   }
 
-  @override
-  Future<Attachment> createAttachment(Attachment attachment) async {
-    String photoId = attachment.id;
-    String filename = '${attachment.filename}.jpg';
-    return Attachment(
-      id: photoId,
-      filename: filename,
-      mediaType: 'image/jpeg',
-      state: AttachmentState.queuedUpload.index,
-      localUri: attachment.localUri,
-      timestamp: attachment.timestamp,
-      size: attachment.size,
-    );
-  }
-
   Future<Attachment> savePhoto(String photoId, int size) async {
     String filename = '$photoId.jpg';
     Attachment photoAttachment = Attachment(
@@ -63,11 +48,10 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     ''').map((results) {
       return results.map((row) => row['photo_id'] as String).toList();
     }).listen((ids) async {
-      List<String> idsNotInQueue =
-          await attachmentsService.getAttachmentIdsNotInQueue(ids);
+      List<String> idsInQueue = await attachmentsService.getAttachmentIds();
       for (String id in ids) {
         log.info('Reconciling photo with id:$id');
-        await syncingService.reconcileId(id, idsNotInQueue);
+        await syncingService.reconcileId(id, idsInQueue);
       }
     });
   }

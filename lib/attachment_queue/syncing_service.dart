@@ -8,7 +8,7 @@ import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.d
 import 'attachments_queue_table.dart';
 import './attachments_service.dart';
 
-final log = Logger('Upload');
+final log = Logger('AttachmentQueue');
 
 class SyncingService {
   final PowerSyncDatabase db;
@@ -34,7 +34,6 @@ class SyncingService {
     try {
       await remoteStorage.uploadFile(attachment.filename, File(imagePath),
           mediaType: attachment.mediaType!);
-      // Mark as uploaded
       await attachmentsService.deleteAttachment(attachment.id);
       log.info('Uploaded attachment "${attachment.id}" to Cloud Storage');
       return;
@@ -50,7 +49,7 @@ class SyncingService {
     }
   }
 
-  Future<bool> downloadAttachment(Attachment attachment) async {
+  Future<void> downloadAttachment(Attachment attachment) async {
     String imagePath =
         await attachmentsService.getLocalUri(attachment.filename);
 
@@ -61,16 +60,15 @@ class SyncingService {
       // Ensure directory exists
       await localStorage
           .makeDir(await attachmentsService.getStorageDirectory());
-
+      // TODO: use local storage adapter for this
       await File(imagePath).writeAsBytes(fileBlob);
-      // await File(imagePath).delete();
 
       log.info('Downloaded file "${attachment.id}"');
       await attachmentsService.deleteAttachment(attachment.id);
-      return true;
+      return;
     } catch (e) {
       log.severe('Download attachment error for record $attachment}', e);
-      return false;
+      return;
     }
   }
 
@@ -80,6 +78,7 @@ class SyncingService {
       await remoteStorage.deleteFile(record.filename);
       await localStorage.deleteFile(fileUri);
       await attachmentsService.deleteAttachment(record.id);
+      log.info('Deleted attachment "${record.id}"');
     } catch (e) {
       log.severe(e);
     }
@@ -100,6 +99,20 @@ class SyncingService {
     });
   }
 
+  Future<void> runDownloads() async {
+    List<Attachment> attachments = await db.execute('''
+      SELECT * FROM $table
+      WHERE state = ${AttachmentState.queuedDownload.index}
+    ''').then((results) {
+      return results.map((row) => Attachment.fromRow(row)).toList();
+    });
+
+    for (Attachment attachment in attachments) {
+      log.info('Downloading ${attachment.filename}');
+      await downloadAttachment(attachment);
+    }
+  }
+
   StreamSubscription<void> watchUploads() {
     log.info('Watching uploads...');
     return db.watch('''
@@ -114,6 +127,21 @@ class SyncingService {
         await uploadAttachment(attachment);
       }
     });
+  }
+
+  Future<void> runUploads() async {
+    List<Attachment> attachments = await db.execute('''
+      SELECT * FROM $table
+      WHERE local_uri IS NOT NULL
+      AND state = ${AttachmentState.queuedUpload.index}
+    ''').then((results) {
+      return results.map((row) => Attachment.fromRow(row)).toList();
+    });
+
+    for (Attachment attachment in attachments) {
+      log.info('Uploading ${attachment.filename}');
+      await uploadAttachment(attachment);
+    }
   }
 
   StreamSubscription<void> watchDeletes() {
@@ -131,13 +159,28 @@ class SyncingService {
     });
   }
 
-  reconcileId(String id, List<String> idsNotInQueue) async {
-    bool idIsNotInQueue = idsNotInQueue.contains(id);
+  Future<void> runDeletes() async {
+    List<Attachment> attachments = await db.execute('''
+      SELECT * FROM $table
+      WHERE state = ${AttachmentState.queuedDelete.index}
+    ''').then((results) {
+      return results.map((row) => Attachment.fromRow(row)).toList();
+    });
+
+    for (Attachment attachment in attachments) {
+      log.info('Deleting ${attachment.filename}');
+      await deleteAttachment(attachment);
+    }
+  }
+
+  reconcileId(String id, List<String> idsInQueue) async {
+    bool idIsInQueue = idsInQueue.contains(id);
+
     String imagePath = await attachmentsService.getLocalUri('$id.jpg');
     File file = File(imagePath);
     bool fileExists = await file.exists();
 
-    if (idIsNotInQueue) {
+    if (!idIsInQueue) {
       if (fileExists) {
         log.info('ignore file $id.jpg as it already exists');
         return;
@@ -149,17 +192,5 @@ class SyncingService {
         state: AttachmentState.queuedDownload.index,
       ));
     }
-
-    Attachment? attachment = await attachmentsService.getAttachment(id);
-    if (attachment == null) {
-      return;
-    }
-
-    int state = fileExists
-        ? AttachmentState.queuedUpload.index
-        : AttachmentState.queuedDownload.index;
-
-    log.info('Updating attachment with $id');
-    await attachmentsService.updateAttachmentState(id, state);
   }
 }

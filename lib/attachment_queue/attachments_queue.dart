@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_service.dart';
-import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachment_queue/syncing_service.dart';
@@ -35,9 +34,6 @@ abstract class AbstractAttachmentQueue {
         SyncingService(db, remoteStorage, localStorage, attachmentsService);
   }
 
-  /// Create a new Attachment, this gets called when the attachment id is not found in the database.
-  Future<Attachment> createAttachment(Attachment attachment);
-
   /// Create watcher to get list of ID's from a table to be used for syncing in the attachment queue
   StreamSubscription<void> watchIds();
 
@@ -50,16 +46,17 @@ abstract class AbstractAttachmentQueue {
     syncingService.watchDownloads();
     syncingService.watchDeletes();
 
-    // if (syncInterval > 0) {
-    //   // In addition to watching for changes, we also trigger a sync every few seconds (30 seconds, by default)
-    //   // This will retry any failed uploads/downloads, in particular after the app was offline
-    //   setInterval(() => this.trigger(), syncInterval);
-    // }
+    db.statusStream.listen((status) {
+      log.info('CONNECTED', db.currentStatus.connected);
+      if (db.currentStatus.connected) {
+        trigger();
+      }
+    });
   }
 
-  // trigger() {
-  //   this.uploadRecords();
-  //   this.downloadRecords();
-  //   this.expireCache();
-  // }
+  trigger() {
+    syncingService.runDownloads();
+    syncingService.runDeletes();
+    syncingService.runUploads();
+  }
 }

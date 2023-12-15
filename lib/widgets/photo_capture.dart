@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -49,16 +48,16 @@ class _TakePhotoWidgetState extends State<TakePhotoWidget> {
       await _initializeControllerFuture;
 
       final XFile photo = await _cameraController.takePicture();
-      String storageDirectory =
-          await attachmentQueue.attachmentsService.getStorageDirectory();
       // copy photo to new directory with ID as name
       String photoId = powersync.uuid.v4();
-      File(photo.path).copySync('$storageDirectory/$photoId.jpg');
+      String storageDirectory =
+          await attachmentQueue.attachmentsService.getStorageDirectory();
+      await attachmentQueue.localStorage
+          .copyFile(photo.path, '$storageDirectory/$photoId.jpg');
 
       int photoSize = await photo.length();
 
       TodoItem.addPhoto(photoId, widget.todoId);
-
       attachmentQueue.savePhoto(photoId, photoSize);
     } catch (e) {
       log.info('Error taking photo: $e');
