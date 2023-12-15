@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +23,6 @@ class TakePhotoWidget extends StatefulWidget {
 class _TakePhotoWidgetState extends State<TakePhotoWidget> {
   late CameraController _cameraController;
   late Future<void> _initializeControllerFuture;
-  XFile? _capturedPhoto;
 
   @override
   void initState() {
@@ -46,30 +43,29 @@ class _TakePhotoWidgetState extends State<TakePhotoWidget> {
     super.dispose();
   }
 
-  Future<void> _takePhoto() async {
+  Future<void> _takePhoto(context) async {
     try {
       // Ensure the camera is initialized before taking a photo
       await _initializeControllerFuture;
 
       final XFile photo = await _cameraController.takePicture();
       String storageDirectory =
-          await attachmentQueue.attachmentService.getStorageDirectory();
-      File newPhoto =
-          File(photo.path).copySync('$storageDirectory/${photo.name}');
-
-      setState(() {
-        _capturedPhoto = photo;
-      });
+          await attachmentQueue.attachmentsService.getStorageDirectory();
+      // copy photo to new directory with ID as name
+      String photoId = powersync.uuid.v4();
+      File(photo.path).copySync('$storageDirectory/$photoId.jpg');
 
       int photoSize = await photo.length();
-      String photoId = powersync.uuid.v4();
+
       TodoItem.addPhoto(photoId, widget.todoId);
-      Uint8List photoAsBytes = newPhoto.readAsBytesSync();
-      String photoAsBase64 = base64Encode(photoAsBytes);
-      attachmentQueue.savePhoto(photoId, photo.name, photoSize, photoAsBase64);
+
+      attachmentQueue.savePhoto(photoId, photoSize);
     } catch (e) {
       log.info('Error taking photo: $e');
     }
+
+    // After taking the photo, navigate back to the previous screen
+    Navigator.pop(context);
   }
 
   @override
@@ -78,29 +74,19 @@ class _TakePhotoWidgetState extends State<TakePhotoWidget> {
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        SizedBox(
-            height: 200, // Set a fixed height to avoid unbounded constraints
-            width: 200,
-            child: FutureBuilder<void>(
-              future: _initializeControllerFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return _capturedPhoto != null
-                      ? Image.file(
-                          File(_capturedPhoto!.path),
-                          height: 200,
-                          width: 200,
-                          fit: BoxFit.cover,
-                        )
-                      : CameraPreview(_cameraController);
-                } else {
-                  return const CircularProgressIndicator();
-                }
-              },
-            )),
+        FutureBuilder<void>(
+          future: _initializeControllerFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done) {
+              return CameraPreview(_cameraController);
+            } else {
+              return const CircularProgressIndicator();
+            }
+          },
+        ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: _takePhoto,
+          onPressed: () => _takePhoto(context),
           child: const Text('Take Photo'),
         ),
       ],

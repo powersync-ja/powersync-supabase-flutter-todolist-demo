@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:logging/logging.dart';
@@ -23,202 +23,143 @@ class SyncingService {
     return ATTACHMENTS_QUEUE_TABLE;
   }
 
-  Future<bool> uploadAttachment(Attachment record) async {
-    if (record.localUri == null) {
-      throw Exception('No localUri for record $record');
+  Future<void> uploadAttachment(Attachment attachment) async {
+    if (attachment.localUri == null) {
+      throw Exception('No localUri for record $attachment');
     }
 
-    bool fileExists = await localStorage.fileExists(record.localUri!);
-    if (fileExists == false) {
-      log.warning('File for ${record.id} does not exist, skipping upload');
-      await attachmentsService.updateRecord(
-          record.copyWith(state: AttachmentState.queuedUpload.index));
-      return true;
-    }
+    String imagePath =
+        await attachmentsService.getLocalUri(attachment.filename);
 
     try {
-      Uint8List fileBuffer = await localStorage.readFile(record.localUri!,
-          mediaType: record.mediaType!);
-
-      await remoteStorage.uploadFile(
-          record.filename, File.fromRawPath(fileBuffer),
-          mediaType: record.mediaType!);
+      await remoteStorage.uploadFile(attachment.filename, File(imagePath),
+          mediaType: attachment.mediaType!);
       // Mark as uploaded
-      await attachmentsService
-          .updateRecord(record.copyWith(state: AttachmentState.synced.index));
-      log.info('Uploaded attachment "${record.id}" to Cloud Storage');
-      return true;
+      await attachmentsService.deleteAttachment(attachment.id);
+      log.info('Uploaded attachment "${attachment.id}" to Cloud Storage');
+      return;
     } catch (e) {
       if (e == 'Duplicate') {
-        log.warning('File already uploaded, marking ${record.id} as synced');
-        await attachmentsService
-            .updateRecord(record.copyWith(state: AttachmentState.synced.index));
-        return false;
+        log.warning(
+            'File already uploaded, marking ${attachment.id} as synced');
+        await attachmentsService.deleteAttachment(attachment.id);
+        return;
       }
-      // log.severe(
-      //     'UploadAttachment error for record ${JSON.stringify(record, null, 2)}');
-      return false;
+      log.severe('UploadAttachment error for record $attachment', e);
+      return;
     }
   }
 
   Future<bool> downloadAttachment(Attachment attachment) async {
-    attachment.localUri ??=
+    String imagePath =
         await attachmentsService.getLocalUri(attachment.filename);
 
-    if (await localStorage.fileExists(attachment.localUri!)) {
-      log.warning(
-          'Local file already downloaded, marking "${attachment.id}" as synced');
-      await attachmentsService.updateRecord(
-          attachment.copyWith(state: AttachmentState.synced.index));
-      return true;
-    }
-
     try {
-      dynamic fileBlob = await remoteStorage.downloadFile(attachment.filename);
-      final bytes = await fileBlob.readAsBytes();
-      final base64Data = base64Encode(bytes);
+      Uint8List fileBlob =
+          await remoteStorage.downloadFile(attachment.filename);
+
       // Ensure directory exists
       await localStorage
-          .makeDir(attachment.localUri!.replaceAll(attachment.filename, ''));
+          .makeDir(await attachmentsService.getStorageDirectory());
 
-      await localStorage.writeFile(
-        attachment.localUri!,
-        base64Data,
-      );
+      await File(imagePath).writeAsBytes(fileBlob);
+      // await File(imagePath).delete();
 
-      await attachmentsService.updateRecord(attachment.copyWith(
-          mediaType: fileBlob.type, state: AttachmentState.synced.index));
-      log.info('Downloaded attachment "${attachment.id}"');
+      log.info('Downloaded file "${attachment.id}"');
+      await attachmentsService.deleteAttachment(attachment.id);
       return true;
     } catch (e) {
-      // log.severe(
-      //     'Download attachment error for record ${JSON.stringify(record, null, 2)}',
-      //     e);
+      log.severe('Download attachment error for record $attachment}', e);
       return false;
     }
   }
 
   Future<void> deleteAttachment(Attachment record) async {
-    String uri = record.localUri ??
-        await attachmentsService.getLocalUri(record.filename);
-
-    await attachmentsService.deleteRecord(record.filename);
-
+    String fileUri = await attachmentsService.getLocalUri(record.filename);
     try {
       await remoteStorage.deleteFile(record.filename);
-      await localStorage.deleteFile(uri);
+      await localStorage.deleteFile(fileUri);
+      await attachmentsService.deleteAttachment(record.id);
     } catch (e) {
       log.severe(e);
     }
   }
 
-  Stream<void> watchDownloads() {
+  StreamSubscription<void> watchDownloads() {
+    log.info('Watching downloads...');
     return db.watch('''
-      SELECT id FROM $table
+      SELECT * FROM $table
       WHERE state = ${AttachmentState.queuedDownload.index}
-      OR state = ${AttachmentState.queuedSync.index}}
-    ''').map((result) {
-      return result
-          .map((row) => Attachment.fromRow(row))
-          .forEach((Attachment attachment) async {
+    ''').map((results) {
+      return results.map((row) => Attachment.fromRow(row));
+    }).listen((attachments) async {
+      for (Attachment attachment in attachments) {
+        log.info('Downloading ${attachment.filename}');
         await downloadAttachment(attachment);
-      });
+      }
     });
   }
 
-  Stream<void> watchUploads() {
+  StreamSubscription<void> watchUploads() {
     log.info('Watching uploads...');
     return db.watch('''
-      SELECT id FROM $table
+      SELECT * FROM $table
       WHERE local_uri IS NOT NULL
       AND state = ${AttachmentState.queuedUpload.index}
-      OR state = ${AttachmentState.queuedSync.index}}
-    ''').map((result) {
-      log.info('This is happening');
-      return result
-          .map((row) => Attachment.fromRow(row))
-          .forEach((Attachment attachment) async {
+    ''').map((results) {
+      return results.map((row) => Attachment.fromRow(row));
+    }).listen((attachments) async {
+      for (Attachment attachment in attachments) {
+        log.info('Uploading ${attachment.filename}');
         await uploadAttachment(attachment);
-      });
+      }
     });
   }
 
-  Future<void> cleanUpRecords(int limit) async {
-    List<Attachment> attachments =
-        await attachmentsService.getAttachmentsForDeletion(limit);
+  StreamSubscription<void> watchDeletes() {
+    log.info('Watching deletes...');
+    return db.watch('''
+      SELECT * FROM $table
+      WHERE state = ${AttachmentState.queuedDelete.index}
+    ''').map((results) {
+      return results.map((row) => Attachment.fromRow(row));
+    }).listen((attachments) async {
+      for (Attachment attachment in attachments) {
+        log.info('Deleting ${attachment.filename}');
+        await deleteAttachment(attachment);
+      }
+    });
+  }
 
-    if (attachments.isEmpty) {
+  reconcileId(String id, List<String> idsNotInQueue) async {
+    bool idIsNotInQueue = idsNotInQueue.contains(id);
+    String imagePath = await attachmentsService.getLocalUri('$id.jpg');
+    File file = File(imagePath);
+    bool fileExists = await file.exists();
+
+    if (idIsNotInQueue) {
+      if (fileExists) {
+        log.info('ignore file $id.jpg as it already exists');
+        return;
+      }
+      log.info('Adding $id to queue');
+      return await attachmentsService.saveRecord(Attachment(
+        id: id,
+        filename: '$id.jpg',
+        state: AttachmentState.queuedDownload.index,
+      ));
+    }
+
+    Attachment? attachment = await attachmentsService.getAttachment(id);
+    if (attachment == null) {
       return;
     }
 
-    log.info('Deleting ${attachments.length} attachments from cache...');
-    await db.writeTransaction((tx) async => {
-          for (Attachment record in attachments)
-            {
-              await Future.wait([
-                attachmentsService.deleteRecord(record.id),
-                deleteAttachment(record),
-              ])
-            }
-        });
+    int state = fileExists
+        ? AttachmentState.queuedUpload.index
+        : AttachmentState.queuedDownload.index;
+
+    log.info('Updating attachment with $id');
+    await attachmentsService.updateAttachmentState(id, state);
   }
-
-  // handleInitialIds(List<String> ids) async {
-  //     String commaSeparatedIds = ids.join(',');
-
-  //     List<Attachment> attachmentsInDatabase = await db.getAll(
-  //             'SELECT * FROM $table WHERE state < ${AttachmentState.archived}')
-  //         as List<Attachment>;
-
-  //     for (var id in ids) {
-  //       AttachmentRecord? record = attachmentsInDatabase.firstWhere(
-  //         (attachment) => attachment.id == id,
-  //         orElse: () => null!,
-  //       );
-
-  //       if (record == null) {
-  //         record = await createNewRecord(id);
-  //         await this.saveToQueue(record)
-  //       }
-
-  // //1. ID is not in the database
-  // if (record == null) {
-  //   var newRecord = await this
-  //       .newAttachmentRecord(id: id, state: AttachmentState.QUEUED_SYNC);
-  //   print('Attachment ($id) not found in database, creating new record');
-  //   await this.saveToQueue(newRecord);
-  // } else if (record.localUri == null ||
-  //     !(await this.storage.fileExists(record.localUri))) {
-  //   // 2. Attachment in database but no local file, mark as queued download
-  //   print(
-  //       'Attachment ($id) found in database but no local file, marking as queued download');
-  //   await this
-  //       .update(record.copyWith(state: AttachmentState.QUEUED_DOWNLOAD));
-  // }
-
-  //   for (const id of ids) {
-  //       const record = attachmentsInDatabase.find((r) => r.id == id);
-  //       // 1. ID is not in the database
-  //       if (!record) {
-  //           const newRecord = await this.newAttachmentRecord({
-  //               id: id,
-  //               state: AttachmentState.QUEUED_SYNC
-  //           });
-  //           console.debug(`Attachment (${id}) not found in database, creating new record`);
-  //           await this.saveToQueue(newRecord);
-  //       } else if (record.localUri == null || !(await this.storage.fileExists(record.localUri))) {
-  //           // 2. Attachment in database but no local file, mark as queued download
-  //           console.debug(`Attachment (${id}) found in database but no local file, marking as queued download`);
-  //           await this.update({
-  //               ...record,
-  //               state: AttachmentState.QUEUED_DOWNLOAD
-  //           });
-  //       }
-  //   }
-
-  //   // 3. Attachment in database and not in AttachmentIds, mark as archived
-  //   await powersync.execute(
-  //       `UPDATE ${this.table} SET state = ${AttachmentState.ARCHIVED} WHERE state < ${AttachmentState.ARCHIVED
-  //       } AND id NOT IN (${ids.map((id) => `'${id}'`).join(',')})`
-  //   );}}
 }

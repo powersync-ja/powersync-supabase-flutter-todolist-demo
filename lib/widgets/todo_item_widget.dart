@@ -8,13 +8,20 @@ import 'package:powersync_flutter_demo/widgets/photo_capture.dart';
 
 import '../models/todo_item.dart';
 
-class TodoItemWidget extends StatelessWidget {
+class TodoItemWidget extends StatefulWidget {
+  final TodoItem todo;
+
   TodoItemWidget({
     required this.todo,
   }) : super(key: ObjectKey(todo.id));
 
-  final TodoItem todo;
+  @override
+  State<StatefulWidget> createState() {
+    return _TodoItemWidgetState();
+  }
+}
 
+class _TodoItemWidgetState extends State<TodoItemWidget> {
   TextStyle? _getTextStyle(bool checked) {
     if (!checked) return null;
 
@@ -30,18 +37,20 @@ class TodoItemWidget extends StatelessWidget {
     if (photoId == null) {
       return null;
     }
-    Attachment? attachment =
-        await attachmentQueue.attachmentService.getRecord(photoId);
-    photoPath = await attachmentQueue.attachmentService
-        .getLocalUri(attachment!.filename);
+    photoPath =
+        await attachmentQueue.attachmentsService.getLocalUri('$photoId.jpg');
+
     return photoPath;
   }
 
   Future<void> deleteTodo(TodoItem todo) async {
     if (todo.photoId != null) {
       Attachment? attachment =
-          await attachmentQueue.attachmentService.getRecord(todo.photoId!);
-      await attachmentQueue.syncingService.deleteAttachment(attachment!);
+          await attachmentQueue.attachmentsService.getAttachment(todo.photoId!);
+      if (attachment != null) {
+        await attachmentQueue.attachmentsService.updateAttachment(
+            attachment.copyWith(state: AttachmentState.queuedDelete.index));
+      }
     }
     await todo.delete();
   }
@@ -49,33 +58,55 @@ class TodoItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-        future: _getPhotoPath(todo.photoId),
+        future: _getPhotoPath(widget.todo.photoId),
         builder: (BuildContext context, AsyncSnapshot snapshot) {
-          Widget photoWidget = AppConfig.supabaseStorageBucket.isNotEmpty
-              ? todo.photoId != null
-                  ? snapshot.hasData
-                      ? Image.file(
-                          File(snapshot.data),
-                          width: 50,
-                          height: 50,
-                        )
-                      : TakePhotoWidget(todoId: todo.id)
-                  : TakePhotoWidget(todoId: todo.id)
-              : Container();
+          Widget takePhotoButton = ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TakePhotoWidget(todoId: widget.todo.id),
+                ),
+              );
+            },
+            child: const Text('Take Photo'),
+          );
+
+          Widget getPhotoWidget() {
+            if (AppConfig.supabaseStorageBucket.isEmpty) {
+              return Container();
+            }
+
+            if (widget.todo.photoId == null) {
+              return takePhotoButton;
+            }
+
+            if (snapshot.hasData) {
+              return Image.file(
+                File(snapshot.data),
+                width: 50,
+                height: 50,
+              );
+            }
+
+            return takePhotoButton;
+          }
+
+          Widget photoWidget = getPhotoWidget();
 
           return ListTile(
-              onTap: todo.toggle,
+              onTap: widget.todo.toggle,
               leading: Checkbox(
-                value: todo.completed,
+                value: widget.todo.completed,
                 onChanged: (_) {
-                  todo.toggle();
+                  widget.todo.toggle();
                 },
               ),
               title: Row(
                 children: <Widget>[
                   Expanded(
-                      child: Text(todo.description,
-                          style: _getTextStyle(todo.completed))),
+                      child: Text(widget.todo.description,
+                          style: _getTextStyle(widget.todo.completed))),
                   IconButton(
                     iconSize: 30,
                     icon: const Icon(
@@ -83,7 +114,7 @@ class TodoItemWidget extends StatelessWidget {
                       color: Colors.red,
                     ),
                     alignment: Alignment.centerRight,
-                    onPressed: () async => await deleteTodo(todo),
+                    onPressed: () async => await deleteTodo(widget.todo),
                     tooltip: 'Delete Item',
                   ),
                   photoWidget,

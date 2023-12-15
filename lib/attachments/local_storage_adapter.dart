@@ -14,12 +14,7 @@ class LocalStorageAdapter implements AbstractLocalStorageAdapter {
   @override
   Future<Uint8List> readFile(String fileUri, {String? mediaType}) async {
     final file = File(fileUri);
-    final fileExists = await file.exists();
-    if (fileExists == false) {
-      throw Exception('File does not exist: $fileUri');
-    }
-    String fileContent = await file.readAsString();
-    return stringToArrayBuffer(fileContent);
+    return await file.readAsBytes();
   }
 
   @override

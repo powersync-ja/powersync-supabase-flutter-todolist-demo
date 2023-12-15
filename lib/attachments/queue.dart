@@ -1,6 +1,5 @@
-import 'dart:io';
+import 'dart:async';
 
-import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
@@ -41,25 +40,35 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     );
   }
 
-  Future<Attachment> savePhoto(
-      String photoId, String filename, int size, String data) async {
-    String localUri = await attachmentService.getLocalUri(filename);
-
+  Future<Attachment> savePhoto(String photoId, int size) async {
+    String filename = '$photoId.jpg';
     Attachment photoAttachment = Attachment(
       id: photoId,
       filename: filename,
       state: AttachmentState.queuedUpload.index,
       mediaType: 'image/jpeg',
-      localUri: attachmentService.getLocalFilePathSuffix(filename),
+      localUri: attachmentsService.getLocalFilePathSuffix(filename),
       size: size,
     );
 
-    try {
-      await localStorage.writeFile(localUri, data);
-    } catch (e) {
-      log.severe(e);
-    }
+    return attachmentsService.saveRecord(photoAttachment);
+  }
 
-    return attachmentService.saveRecord(photoAttachment);
+  @override
+  StreamSubscription<void> watchIds() {
+    log.info('Watching photos in todos...');
+    return db.watch('''
+      SELECT photo_id FROM todos
+      WHERE photo_id IS NOT NULL
+    ''').map((results) {
+      return results.map((row) => row['photo_id'] as String).toList();
+    }).listen((ids) async {
+      List<String> idsNotInQueue =
+          await attachmentsService.getAttachmentIdsNotInQueue(ids);
+      for (String id in ids) {
+        log.info('Reconciling photo with id:$id');
+        await syncingService.reconcileId(id, idsNotInQueue);
+      }
+    });
   }
 }

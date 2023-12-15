@@ -41,6 +41,11 @@ class Attachment {
         state: state ?? this.state);
   }
 
+  @override
+  String toString() {
+    return 'Attachment{id: $id, filename: $filename, localUri: $localUri, size: $size, mediaType: $mediaType, timestamp: $timestamp, state: $state}';
+  }
+
   factory Attachment.fromRow(sqlite.Row row) {
     return Attachment(
         id: row['id'],
@@ -54,11 +59,9 @@ class Attachment {
 }
 
 enum AttachmentState {
-  queuedSync, // Check if the attachment needs to be uploaded or downloaded
   queuedUpload, // Attachment to be uploaded
   queuedDownload, // Attachment to be downloaded
-  synced, // Attachment has been synced
-  archived // Attachment has been orphaned, i.e. the associated record has been deleted
+  queuedDelete, // Attachment to be deleted
 }
 
 class AttachmentsQueueTable extends Table {

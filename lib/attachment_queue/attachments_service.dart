@@ -1,6 +1,8 @@
 import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.dart';
+import 'package:powersync_flutter_demo/attachment_queue/syncing_service.dart';
+import 'package:sqlite_async/sqlite3.dart';
 
 class AttachmentsService {
   final PowerSyncDatabase db;
@@ -33,14 +35,27 @@ class AttachmentsService {
     return '$storageDirectory/$filePath';
   }
 
-  Future<void> deleteRecord(String filename) async =>
-      await db.execute('DELETE FROM $table WHERE filename = ?', [filename]);
+  Future<void> deleteAttachment(String id) async =>
+      db.execute('DELETE FROM $table WHERE id = ?', [id]);
 
-  Future<Attachment?> getRecord(String id) async =>
-      await (db.getOptional('SELECT * FROM $table WHERE id = ?', [id])
-          as Attachment?);
+  Future<Attachment?> getAttachment(String id) async =>
+      db.getOptional('SELECT * FROM $table WHERE id = ?', [id]).then((row) {
+        if (row == null) {
+          return null;
+        }
+        return Attachment.fromRow(row);
+      });
 
-  Future<void> updateRecord(Attachment record) async {
+  Future<void> updateAttachmentState(String id, int state) async {
+    await db.execute('''
+      UPDATE $table
+      SET
+        state = ?
+      WHERE id = ?
+    ''', [state, id]);
+  }
+
+  Future<void> updateAttachment(Attachment record) async {
     int timestamp = DateTime.now().millisecondsSinceEpoch;
 
     await db.execute('''
@@ -69,20 +84,8 @@ class AttachmentsService {
       SELECT * FROM $table
       WHERE local_uri IS NOT NULL
       AND (state = ${AttachmentState.queuedUpload.index}
-      OR state = ${AttachmentState.queuedSync.index})
       ORDER BY timestamp ASC}}
     ''') as Attachment?;
-  }
-
-  Future<List<String>> getIdsToDownload() async {
-    List<Attachment> records = await db.getAll('''
-      SELECT id FROM $table
-      WHERE state = ${AttachmentState.queuedDownload.index}
-      OR state = ${AttachmentState.queuedSync.index}
-      ORDER BY timestamp ASC
-    ''') as List<Attachment>;
-
-    return records.map((record) => record.id).toList();
   }
 
   Future<Attachment> saveRecord(Attachment record) async {
@@ -106,14 +109,19 @@ class AttachmentsService {
     return updatedRecord;
   }
 
-  Future<List<Attachment>> getAttachmentsForDeletion(int limit) async {
-    List<Attachment> records = await db.getAll('''
-      SELECT * FROM $table
-      WHERE state = ${AttachmentState.synced.index} OR state = ${AttachmentState.archived.index}
-      ORDER BY timestamp DESC
-      LIMIT $limit
-    ''') as List<Attachment>;
+  Future<List<String>> getAttachmentIdsNotInQueue(List<String> ids) async {
+    ResultSet results = await db.getAll(
+        'SELECT id FROM $table WHERE id NOT IN (${List.filled(ids.length, '?').join(', ')})',
+        ids);
 
-    return records;
+    List<String> idsNotInQueue =
+        results.map((row) => row['id'] as String).toList();
+
+    return idsNotInQueue;
+  }
+
+  Future<void> clearQueue() async {
+    log.info('Clearing attachment queue...');
+    await db.execute('DELETE FROM $table');
   }
 }

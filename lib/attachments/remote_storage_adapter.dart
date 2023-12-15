@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image/image.dart' as img;
 import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.dart';
 
 class SupabaseStorageAdapter implements AbstractRemoteStorageAdapter {
@@ -24,9 +25,11 @@ class SupabaseStorageAdapter implements AbstractRemoteStorageAdapter {
   Future<Uint8List> downloadFile(String filePath) async {
     checkSupabaseBucketIsConfigured();
     try {
-      Uint8List blob = await Supabase.instance.client.storage
+      Uint8List fileBlob = await Supabase.instance.client.storage
           .from(AppConfig.supabaseStorageBucket)
           .download(filePath);
+      final image = img.decodeImage(fileBlob);
+      Uint8List blob = img.JpegEncoder().encode(image!);
       return blob;
     } catch (error) {
       throw Exception(error);
