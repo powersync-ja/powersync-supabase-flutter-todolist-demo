@@ -6,20 +6,13 @@ import 'package:powersync_flutter_demo/attachments/queue.dart';
 
 import '../models/todo_item.dart';
 
-class TodoItemWidget extends StatefulWidget {
-  final TodoItem todo;
-
+class TodoItemWidget extends StatelessWidget {
   TodoItemWidget({
     required this.todo,
   }) : super(key: ObjectKey(todo.id));
 
-  @override
-  State<StatefulWidget> createState() {
-    return _TodoItemWidgetState();
-  }
-}
+  final TodoItem todo;
 
-class _TodoItemWidgetState extends State<TodoItemWidget> {
   TextStyle? _getTextStyle(bool checked) {
     if (!checked) return null;
 
@@ -42,18 +35,18 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-        onTap: widget.todo.toggle,
+        onTap: todo.toggle,
         leading: Checkbox(
-          value: widget.todo.completed,
+          value: todo.completed,
           onChanged: (_) {
-            widget.todo.toggle();
+            todo.toggle();
           },
         ),
         title: Row(
           children: <Widget>[
             Expanded(
-                child: Text(widget.todo.description,
-                    style: _getTextStyle(widget.todo.completed))),
+                child: Text(todo.description,
+                    style: _getTextStyle(todo.completed))),
             IconButton(
               iconSize: 30,
               icon: const Icon(
@@ -61,12 +54,12 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
                 color: Colors.red,
               ),
               alignment: Alignment.centerRight,
-              onPressed: () async => await deleteTodo(widget.todo),
+              onPressed: () async => await deleteTodo(todo),
               tooltip: 'Delete Item',
             ),
             AppConfig.supabaseStorageBucket.isEmpty
                 ? Container()
-                : PhotoWidget(todo: widget.todo),
+                : PhotoWidget(todo: todo),
           ],
         ));
   }
