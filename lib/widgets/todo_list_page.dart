@@ -80,11 +80,10 @@ class TodoListWidgetState extends State<TodoListWidget> {
   @override
   Widget build(BuildContext context) {
     return ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        children: [
-          ..._data.map((todo) {
-            return TodoItemWidget(todo: todo);
-          }),
-        ]);
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      children: _data.map((todo) {
+        return TodoItemWidget(todo: todo);
+      }).toList(),
+    );
   }
 }
