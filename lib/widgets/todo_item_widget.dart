@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
+import 'package:powersync_flutter_demo/attachments/photo_widget.dart';
 import 'package:powersync_flutter_demo/attachments/queue.dart';
-import 'package:powersync_flutter_demo/widgets/photo.dart';
 
 import '../models/todo_item.dart';
 
@@ -63,7 +64,9 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
               onPressed: () async => await deleteTodo(widget.todo),
               tooltip: 'Delete Item',
             ),
-            PhotoWidget(todo: widget.todo),
+            AppConfig.supabaseStorageBucket.isEmpty
+                ? Container()
+                : PhotoWidget(todo: widget.todo),
           ],
         ));
   }

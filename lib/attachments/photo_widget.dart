@@ -1,9 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:powersync_flutter_demo/app_config.dart';
+import 'package:powersync_flutter_demo/attachments/photo_capture_widget.dart';
 import 'package:powersync_flutter_demo/attachments/queue.dart';
-import 'package:powersync_flutter_demo/widgets/photo_capture.dart';
 
 import '../models/todo_item.dart';
 
@@ -50,10 +49,6 @@ class _PhotoWidgetState extends State<PhotoWidget> {
             },
             child: const Text('Take Photo'),
           );
-
-          if (AppConfig.supabaseStorageBucket.isEmpty) {
-            return Container();
-          }
 
           if (widget.todo.photoId == null) {
             return takePhotoButton;
