@@ -1,3 +1,5 @@
+import 'package:powersync_flutter_demo/models/schema.dart';
+
 import '../powersync.dart';
 import 'package:powersync/sqlite3.dart' as sqlite;
 
@@ -28,21 +30,21 @@ class TodoItem {
   Future<void> toggle() async {
     if (completed) {
       await db.execute(
-          'UPDATE todos SET completed = FALSE, completed_by = NULL, completed_at = NULL WHERE id = ?',
+          'UPDATE $TODOS_TABLE SET completed = FALSE, completed_by = NULL, completed_at = NULL WHERE id = ?',
           [id]);
     } else {
       await db.execute(
-          'UPDATE todos SET completed = TRUE, completed_by = ?, completed_at = datetime() WHERE id = ?',
+          'UPDATE $TODOS_TABLE SET completed = TRUE, completed_by = ?, completed_at = datetime() WHERE id = ?',
           [getUserId(), id]);
     }
   }
 
   Future<void> delete() async {
-    await db.execute('DELETE FROM todos WHERE id = ?', [id]);
+    await db.execute('DELETE FROM $TODOS_TABLE WHERE id = ?', [id]);
   }
 
   static Future<void> addPhoto(String photoId, String id) async {
-    await db
-        .execute('UPDATE todos SET photo_id = ? WHERE id = ?', [photoId, id]);
+    await db.execute(
+        'UPDATE $TODOS_TABLE SET photo_id = ? WHERE id = ?', [photoId, id]);
   }
 }

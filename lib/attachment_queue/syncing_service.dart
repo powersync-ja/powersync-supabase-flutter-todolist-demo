@@ -1,35 +1,34 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:logging/logging.dart';
 import 'package:powersync/powersync.dart';
+import 'package:powersync_flutter_demo/attachment_queue/attachments_queue.dart';
 import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.dart';
 import 'attachments_queue_table.dart';
 import './attachments_service.dart';
 
-final log = Logger('AttachmentQueue');
-
+/// Service used to sync attachments between local and remote storage
 class SyncingService {
   final PowerSyncDatabase db;
   final AbstractRemoteStorageAdapter remoteStorage;
   final AbstractLocalStorageAdapter localStorage;
   final AttachmentsService attachmentsService;
+  final Function getLocalUri;
 
-  SyncingService(
-      this.db, this.remoteStorage, this.localStorage, this.attachmentsService);
+  SyncingService(this.db, this.remoteStorage, this.localStorage,
+      this.attachmentsService, this.getLocalUri);
 
-  get table {
-    return ATTACHMENTS_QUEUE_TABLE;
-  }
-
+  /// Upload attachment from local storage and to remote storage
+  /// then remove it from the queue.
+  /// If duplicate of the file is found uploading is ignored and
+  /// the attachment is removed from the queue.
   Future<void> uploadAttachment(Attachment attachment) async {
     if (attachment.localUri == null) {
-      throw Exception('No localUri for record $attachment');
+      throw Exception('No localUri for attachment $attachment');
     }
 
-    String imagePath =
-        await attachmentsService.getLocalUri(attachment.filename);
+    String imagePath = await getLocalUri(attachment.filename);
 
     try {
       await remoteStorage.uploadFile(attachment.filename, File(imagePath),
@@ -39,55 +38,56 @@ class SyncingService {
       return;
     } catch (e) {
       if (e == 'Duplicate') {
-        log.warning(
-            'File already uploaded, marking ${attachment.id} as synced');
+        log.warning('File already uploaded, deleting ${attachment.id}');
         await attachmentsService.deleteAttachment(attachment.id);
         return;
       }
-      log.severe('UploadAttachment error for record $attachment', e);
+      log.severe('UploadAttachment error for attachment $attachment', e);
       return;
     }
   }
 
+  /// Download attachment from remote storage and save it to local storage
+  /// then remove it from the queue.
   Future<void> downloadAttachment(Attachment attachment) async {
-    String imagePath =
-        await attachmentsService.getLocalUri(attachment.filename);
+    String imagePath = await getLocalUri(attachment.filename);
 
     try {
       Uint8List fileBlob =
           await remoteStorage.downloadFile(attachment.filename);
 
-      // Ensure directory exists
-      await localStorage
-          .makeDir(await attachmentsService.getStorageDirectory());
-      // TODO: use local storage adapter for this
-      await File(imagePath).writeAsBytes(fileBlob);
+      await localStorage.saveFile(imagePath, fileBlob);
 
       log.info('Downloaded file "${attachment.id}"');
       await attachmentsService.deleteAttachment(attachment.id);
       return;
     } catch (e) {
-      log.severe('Download attachment error for record $attachment}', e);
+      log.severe('Download attachment error for attachment $attachment}', e);
       return;
     }
   }
 
-  Future<void> deleteAttachment(Attachment record) async {
-    String fileUri = await attachmentsService.getLocalUri(record.filename);
+  /// Delete attachment from remote, local storage and then remove it from the queue.
+  Future<void> deleteAttachment(Attachment attachment) async {
+    String fileUri = await getLocalUri(attachment.filename);
     try {
-      await remoteStorage.deleteFile(record.filename);
+      await remoteStorage.deleteFile(attachment.filename);
       await localStorage.deleteFile(fileUri);
-      await attachmentsService.deleteAttachment(record.id);
-      log.info('Deleted attachment "${record.id}"');
+      await attachmentsService.deleteAttachment(attachment.id);
+      log.info('Deleted attachment "${attachment.id}"');
     } catch (e) {
       log.severe(e);
     }
   }
 
+  /// Function to manually run downloads for attachments marked for download
+  /// in the attachment queue.
+  /// Once a an attachment marked for download is found it will initiate a
+  /// download of the file to local storage.
   StreamSubscription<void> watchDownloads() {
     log.info('Watching downloads...');
     return db.watch('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE state = ${AttachmentState.queuedDownload.index}
     ''').map((results) {
       return results.map((row) => Attachment.fromRow(row));
@@ -99,9 +99,12 @@ class SyncingService {
     });
   }
 
+  /// Watcher for attachments marked for download in the attachment queue.
+  /// Once a an attachment marked for download is found it will initiate a
+  /// download of the file to local storage.
   Future<void> runDownloads() async {
     List<Attachment> attachments = await db.execute('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE state = ${AttachmentState.queuedDownload.index}
     ''').then((results) {
       return results.map((row) => Attachment.fromRow(row)).toList();
@@ -113,10 +116,13 @@ class SyncingService {
     }
   }
 
+  /// Watcher for attachments marked for upload in the attachment queue.
+  /// Once a an attachment marked for upload is found it will initiate an
+  /// upload of the file to remote storage.
   StreamSubscription<void> watchUploads() {
     log.info('Watching uploads...');
     return db.watch('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE local_uri IS NOT NULL
       AND state = ${AttachmentState.queuedUpload.index}
     ''').map((results) {
@@ -129,9 +135,13 @@ class SyncingService {
     });
   }
 
+  /// Function to manually run uploads for attachments marked for upload
+  /// in the attachment queue.
+  /// Once a an attachment marked for deletion is found it will initiate an
+  /// upload of the file to remote storage
   Future<void> runUploads() async {
     List<Attachment> attachments = await db.execute('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE local_uri IS NOT NULL
       AND state = ${AttachmentState.queuedUpload.index}
     ''').then((results) {
@@ -144,10 +154,13 @@ class SyncingService {
     }
   }
 
+  /// Watcher for attachments marked for deletion in the attachment queue.
+  /// Once a an attachment marked for deletion is found it will initiate remote
+  /// and local deletions of the file.
   StreamSubscription<void> watchDeletes() {
     log.info('Watching deletes...');
     return db.watch('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE state = ${AttachmentState.queuedDelete.index}
     ''').map((results) {
       return results.map((row) => Attachment.fromRow(row));
@@ -159,9 +172,13 @@ class SyncingService {
     });
   }
 
+  /// Function to manually run deletes for attachments marked for deletion
+  /// in the attachment queue.
+  /// Once a an attachment marked for deletion is found it will initiate remote
+  /// and local deletions of the file.
   Future<void> runDeletes() async {
     List<Attachment> attachments = await db.execute('''
-      SELECT * FROM $table
+      SELECT * FROM ${attachmentsService.table}
       WHERE state = ${AttachmentState.queuedDelete.index}
     ''').then((results) {
       return results.map((row) => Attachment.fromRow(row)).toList();
@@ -173,10 +190,15 @@ class SyncingService {
     }
   }
 
+  /// Reconcile an ID with ID's in the attachment queue.
+  /// If the ID is not in the queue, but the file exists locally then it is
+  /// in local and remote storage.
+  /// If the ID is in the queue, but the file does not exist locally then it is
+  /// marked for download.
   reconcileId(String id, List<String> idsInQueue) async {
     bool idIsInQueue = idsInQueue.contains(id);
 
-    String imagePath = await attachmentsService.getLocalUri('$id.jpg');
+    String imagePath = await getLocalUri('$id.jpg');
     File file = File(imagePath);
     bool fileExists = await file.exists();
 
@@ -186,7 +208,7 @@ class SyncingService {
         return;
       }
       log.info('Adding $id to queue');
-      return await attachmentsService.saveRecord(Attachment(
+      return await attachmentsService.saveAttachment(Attachment(
         id: id,
         filename: '$id.jpg',
         state: AttachmentState.queuedDownload.index,

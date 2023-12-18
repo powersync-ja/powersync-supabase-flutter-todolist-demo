@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
-import 'package:powersync_flutter_demo/attachment_queue/syncing_service.dart';
+import 'package:powersync_flutter_demo/models/schema.dart';
 
 /// Global reference to the queue
 late final PhotoAttachmentQueue attachmentQueue;
@@ -17,8 +17,6 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     if (AppConfig.supabaseStorageBucket.isEmpty) {
       log.info(
           'No Supabase bucket configured, skip setting up PhotoAttachmentQueue watches');
-      // Disable sync interval to prevent errors from trying to sync to a non-existent bucket
-      syncInterval = 0;
       return;
     }
 
@@ -32,18 +30,18 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
       filename: filename,
       state: AttachmentState.queuedUpload.index,
       mediaType: 'image/jpeg',
-      localUri: attachmentsService.getLocalFilePathSuffix(filename),
+      localUri: getLocalFilePathSuffix(filename),
       size: size,
     );
 
-    return attachmentsService.saveRecord(photoAttachment);
+    return attachmentsService.saveAttachment(photoAttachment);
   }
 
   @override
   StreamSubscription<void> watchIds() {
-    log.info('Watching photos in todos...');
+    log.info('Watching photos in $TODOS_TABLE...');
     return db.watch('''
-      SELECT photo_id FROM todos
+      SELECT photo_id FROM $TODOS_TABLE
       WHERE photo_id IS NOT NULL
     ''').map((results) {
       return results.map((row) => row['photo_id'] as String).toList();

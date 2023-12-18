@@ -9,7 +9,7 @@ class SupabaseStorageAdapter implements AbstractRemoteStorageAdapter {
   @override
   Future<void> uploadFile(String filename, File file,
       {String mediaType = 'text/plain'}) async {
-    checkSupabaseBucketIsConfigured();
+    _checkSupabaseBucketIsConfigured();
 
     try {
       await Supabase.instance.client.storage
@@ -23,7 +23,7 @@ class SupabaseStorageAdapter implements AbstractRemoteStorageAdapter {
 
   @override
   Future<Uint8List> downloadFile(String filePath) async {
-    checkSupabaseBucketIsConfigured();
+    _checkSupabaseBucketIsConfigured();
     try {
       Uint8List fileBlob = await Supabase.instance.client.storage
           .from(AppConfig.supabaseStorageBucket)
@@ -37,20 +37,19 @@ class SupabaseStorageAdapter implements AbstractRemoteStorageAdapter {
   }
 
   @override
-  Future<FileObject> deleteFile(String filename) async {
-    checkSupabaseBucketIsConfigured();
+  Future<void> deleteFile(String filename) async {
+    _checkSupabaseBucketIsConfigured();
 
     try {
-      List<FileObject> blob = await Supabase.instance.client.storage
+      await Supabase.instance.client.storage
           .from(AppConfig.supabaseStorageBucket)
           .remove([filename]);
-      return blob.first;
     } catch (error) {
       throw Exception(error);
     }
   }
 
-  checkSupabaseBucketIsConfigured() {
+  void _checkSupabaseBucketIsConfigured() {
     if (AppConfig.supabaseStorageBucket.isEmpty) {
       throw Exception(
           'Supabase storage bucket is not configured in app_config.dart');

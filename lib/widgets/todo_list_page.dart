@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:powersync_flutter_demo/attachments/queue.dart';
 import 'package:powersync_flutter_demo/models/todo_item.dart';
 
 import './status_app_bar.dart';
@@ -81,34 +80,11 @@ class TodoListWidgetState extends State<TodoListWidget> {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      children: [
-        ..._data.map((todo) {
-          return TodoItemWidget(todo: todo);
-        }),
-        IconButton(
-          iconSize: 30,
-          icon: const Icon(
-            Icons.queue,
-            color: Colors.red,
-          ),
-          alignment: Alignment.centerRight,
-          onPressed: () async =>
-              await attachmentQueue.attachmentsService.clearQueue(),
-        ),
-        IconButton(
-            iconSize: 30,
-            icon: const Icon(
-              Icons.picture_in_picture,
-              color: Colors.red,
-            ),
-            alignment: Alignment.centerRight,
-            onPressed: () async => {
-                  await attachmentQueue.localStorage.deleteFile(
-                      await attachmentQueue.attachmentsService.getLocalUri(
-                          'ca2a3513-24ab-4322-8496-519078681a8b.jpg'))
-                }),
-      ],
-    );
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        children: [
+          ..._data.map((todo) {
+            return TodoItemWidget(todo: todo);
+          }),
+        ]);
   }
 }

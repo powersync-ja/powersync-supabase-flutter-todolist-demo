@@ -1,10 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 import 'package:powersync_flutter_demo/attachments/queue.dart';
-import 'package:powersync_flutter_demo/widgets/photo_capture.dart';
+import 'package:powersync_flutter_demo/widgets/photo.dart';
 
 import '../models/todo_item.dart';
 
@@ -31,21 +28,9 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
     );
   }
 
-  late String photoPath;
-
-  Future<String?> _getPhotoPath(photoId) async {
-    if (photoId == null) {
-      return null;
-    }
-    photoPath =
-        await attachmentQueue.attachmentsService.getLocalUri('$photoId.jpg');
-
-    return photoPath;
-  }
-
   Future<void> deleteTodo(TodoItem todo) async {
     if (todo.photoId != null) {
-      attachmentQueue.attachmentsService.saveRecord(Attachment(
+      attachmentQueue.attachmentsService.saveAttachment(Attachment(
           id: todo.photoId!,
           filename: '${todo.photoId}.jpg',
           state: AttachmentState.queuedDelete.index));
@@ -55,69 +40,31 @@ class _TodoItemWidgetState extends State<TodoItemWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: _getPhotoPath(widget.todo.photoId),
-        builder: (BuildContext context, AsyncSnapshot snapshot) {
-          Widget takePhotoButton = ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TakePhotoWidget(todoId: widget.todo.id),
-                ),
-              );
-            },
-            child: const Text('Take Photo'),
-          );
-
-          Widget getPhotoWidget() {
-            if (AppConfig.supabaseStorageBucket.isEmpty) {
-              return Container();
-            }
-
-            if (widget.todo.photoId == null) {
-              return takePhotoButton;
-            }
-
-            if (snapshot.hasData) {
-              return Image.file(
-                File(snapshot.data),
-                width: 50,
-                height: 50,
-              );
-            }
-
-            return takePhotoButton;
-          }
-
-          Widget photoWidget = getPhotoWidget();
-
-          return ListTile(
-              onTap: widget.todo.toggle,
-              leading: Checkbox(
-                value: widget.todo.completed,
-                onChanged: (_) {
-                  widget.todo.toggle();
-                },
+    return ListTile(
+        onTap: widget.todo.toggle,
+        leading: Checkbox(
+          value: widget.todo.completed,
+          onChanged: (_) {
+            widget.todo.toggle();
+          },
+        ),
+        title: Row(
+          children: <Widget>[
+            Expanded(
+                child: Text(widget.todo.description,
+                    style: _getTextStyle(widget.todo.completed))),
+            IconButton(
+              iconSize: 30,
+              icon: const Icon(
+                Icons.delete,
+                color: Colors.red,
               ),
-              title: Row(
-                children: <Widget>[
-                  Expanded(
-                      child: Text(widget.todo.description,
-                          style: _getTextStyle(widget.todo.completed))),
-                  IconButton(
-                    iconSize: 30,
-                    icon: const Icon(
-                      Icons.delete,
-                      color: Colors.red,
-                    ),
-                    alignment: Alignment.centerRight,
-                    onPressed: () async => await deleteTodo(widget.todo),
-                    tooltip: 'Delete Item',
-                  ),
-                  photoWidget,
-                ],
-              ));
-        });
+              alignment: Alignment.centerRight,
+              onPressed: () async => await deleteTodo(widget.todo),
+              tooltip: 'Delete Item',
+            ),
+            PhotoWidget(todo: widget.todo),
+          ],
+        ));
   }
 }

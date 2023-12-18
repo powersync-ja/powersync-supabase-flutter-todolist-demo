@@ -1,8 +1,12 @@
 import 'package:powersync/powersync.dart';
 import 'package:powersync/sqlite3.dart' as sqlite;
+import 'dart:math';
 
-const ATTACHMENTS_QUEUE_TABLE = 'attachments_queue';
+/// Global reference to the attachment queue table
+final String ATTACHMENTS_QUEUE_TABLE = 'queue_${_getRandomString(6)}';
 
+/// Class used to create the attachment queue table
+/// The table is local only and will not be visible in the remote database
 class Attachment {
   String id;
   String filename;
@@ -58,10 +62,14 @@ class Attachment {
   }
 }
 
+/// Different states that an attachment in the queue can be in
+/// 1. Attachment to be uploaded
+/// 2. Attachment to be downloaded
+/// 3. Attachment to be deleted
 enum AttachmentState {
-  queuedUpload, // Attachment to be uploaded
-  queuedDownload, // Attachment to be downloaded
-  queuedDelete, // Attachment to be deleted
+  queuedUpload,
+  queuedDownload,
+  queuedDelete,
 }
 
 class AttachmentsQueueTable extends Table {
@@ -83,3 +91,9 @@ class AttachmentsQueueTable extends Table {
             viewName: viewName,
             indexes: indexes);
 }
+
+const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+Random _rnd = Random();
+
+String _getRandomString(int length) => String.fromCharCodes(Iterable.generate(
+    length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));

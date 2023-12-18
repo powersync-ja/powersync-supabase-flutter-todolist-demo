@@ -6,6 +6,7 @@ import 'package:powersync_flutter_demo/attachments/camera_helpers.dart';
 import 'package:powersync_flutter_demo/attachments/local_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachments/queue.dart';
 import 'package:powersync_flutter_demo/attachments/remote_storage_adapter.dart';
+import 'package:powersync_flutter_demo/models/schema.dart';
 
 import './powersync.dart';
 import './widgets/lists_page.dart';
@@ -48,7 +49,7 @@ void main() async {
   runApp(MyApp(loggedIn: loggedIn));
 }
 
-const defaultQuery = 'SELECT * from todos';
+const defaultQuery = 'SELECT * from $TODOS_TABLE';
 
 const listsPage = ListsPage();
 const homePage = listsPage;

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
@@ -6,9 +5,9 @@ import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.da
 
 class LocalStorageAdapter implements AbstractLocalStorageAdapter {
   @override
-  Future<void> writeFile(String fileUri, String data) async {
+  Future<File> saveFile(String fileUri, Uint8List data) async {
     final file = File(fileUri);
-    await file.writeAsString(data);
+    return await file.writeAsBytes(data);
   }
 
   @override
@@ -51,17 +50,5 @@ class LocalStorageAdapter implements AbstractLocalStorageAdapter {
   Future<String> getUserStorageDirectory() async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
-  }
-
-  Future<Uint8List> base64ToArrayBuffer(String str) async {
-    return base64.decode(str);
-  }
-
-  Future<Uint8List> stringToArrayBuffer(String str) async {
-    const encoder = Utf8Encoder();
-    List<int> encodedBytes = encoder.convert(str);
-    Uint8List uint8List = Uint8List.fromList(encodedBytes);
-
-    return uint8List;
   }
 }

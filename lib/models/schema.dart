@@ -1,8 +1,10 @@
 import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 
+const TODOS_TABLE = 'todos';
+
 Schema schema = Schema(([
-  const Table('todos', [
+  const Table(TODOS_TABLE, [
     Column.text('list_id'),
     Column.text('photo_id'),
     Column.text('created_at'),

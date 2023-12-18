@@ -50,8 +50,7 @@ class _TakePhotoWidgetState extends State<TakePhotoWidget> {
       final XFile photo = await _cameraController.takePicture();
       // copy photo to new directory with ID as name
       String photoId = powersync.uuid.v4();
-      String storageDirectory =
-          await attachmentQueue.attachmentsService.getStorageDirectory();
+      String storageDirectory = await attachmentQueue.getStorageDirectory();
       await attachmentQueue.localStorage
           .copyFile(photo.path, '$storageDirectory/$photoId.jpg');
 
