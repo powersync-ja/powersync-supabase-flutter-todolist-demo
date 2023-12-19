@@ -28,6 +28,7 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     await super.init();
   }
 
+  @override
   Future<Attachment> savePhoto(String photoId, int size) async {
     String filename = '$photoId.jpg';
     Attachment photoAttachment = Attachment(
@@ -43,6 +44,17 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
   }
 
   @override
+  Future<Attachment> deletePhoto(String photoId) async {
+    String filename = '$photoId.jpg';
+    Attachment photoAttachment = Attachment(
+        id: photoId,
+        filename: filename,
+        state: AttachmentState.queuedDelete.index);
+
+    return attachmentsService.saveAttachment(photoAttachment);
+  }
+
+  @override
   StreamSubscription<void> watchIds() {
     log.info('Watching photos in $TODOS_TABLE...');
     return db.watch('''
@@ -53,7 +65,6 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
     }).listen((ids) async {
       List<String> idsInQueue = await attachmentsService.getAttachmentIds();
       for (String id in ids) {
-        log.info('Reconciling photo with id:$id');
         await syncingService.reconcileId(id, idsInQueue);
       }
     });

@@ -5,6 +5,7 @@ import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue.dart';
 import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'attachments_queue_table.dart';
 import './attachments_service.dart';
 
@@ -37,12 +38,12 @@ class SyncingService {
       log.info('Uploaded attachment "${attachment.id}" to Cloud Storage');
       return;
     } catch (e) {
-      if (e == 'Duplicate') {
+      if (e is StorageException && e.error == 'Duplicate') {
         log.warning('File already uploaded, deleting ${attachment.id}');
         await attachmentsService.deleteAttachment(attachment.id);
         return;
       }
-      log.severe('UploadAttachment error for attachment $attachment', e);
+      log.severe('Upload attachment error for attachment $attachment', e);
       return;
     }
   }

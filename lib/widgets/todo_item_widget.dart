@@ -24,10 +24,7 @@ class TodoItemWidget extends StatelessWidget {
 
   Future<void> deleteTodo(TodoItem todo) async {
     if (todo.photoId != null) {
-      attachmentQueue.attachmentsService.saveAttachment(Attachment(
-          id: todo.photoId!,
-          filename: '${todo.photoId}.jpg',
-          state: AttachmentState.queuedDelete.index));
+      attachmentQueue.deletePhoto(todo.photoId!);
     }
     await todo.delete();
   }

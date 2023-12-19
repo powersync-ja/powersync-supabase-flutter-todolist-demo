@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:logging/logging.dart';
 import 'package:powersync/powersync.dart';
+import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_service.dart';
 import 'package:powersync_flutter_demo/attachment_queue/local_storage_adapter.dart';
 import 'package:powersync_flutter_demo/attachment_queue/remote_storage_adapter.dart';
@@ -40,6 +41,12 @@ abstract class AbstractAttachmentQueue {
 
   /// Create watcher to get list of ID's from a table to be used for syncing in the attachment queue
   StreamSubscription<void> watchIds();
+
+  /// Create a function to save photos using the attachment queue
+  Future<Attachment> savePhoto(String photoId, int size);
+
+  /// Create a function to delete photos using the attachment queue
+  Future<Attachment> deletePhoto(String photoId);
 
   /// Initialize the attachment queue by
   /// 1. Creating attachments directory
