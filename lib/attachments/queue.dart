@@ -1,12 +1,17 @@
 import 'dart:async';
 
+import 'package:powersync/powersync.dart';
 import 'package:powersync_flutter_demo/app_config.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue.dart';
 import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
+import 'package:powersync_flutter_demo/attachments/local_storage_adapter.dart';
+import 'package:powersync_flutter_demo/attachments/remote_storage_adapter.dart';
 import 'package:powersync_flutter_demo/models/schema.dart';
 
 /// Global reference to the queue
 late final PhotoAttachmentQueue attachmentQueue;
+final localStorage = LocalStorageAdapter();
+final remoteStorage = SupabaseStorageAdapter();
 
 class PhotoAttachmentQueue extends AbstractAttachmentQueue {
   PhotoAttachmentQueue(db, localStorage, remoteStorage)
@@ -53,4 +58,9 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
       }
     });
   }
+}
+
+initializeAttachmentQueue(PowerSyncDatabase db) async {
+  attachmentQueue = PhotoAttachmentQueue(db, localStorage, remoteStorage);
+  await attachmentQueue.init();
 }
