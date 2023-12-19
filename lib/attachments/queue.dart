@@ -56,9 +56,9 @@ class PhotoAttachmentQueue extends AbstractAttachmentQueue {
 
   @override
   StreamSubscription<void> watchIds() {
-    log.info('Watching photos in $TODOS_TABLE...');
+    log.info('Watching photos in $todosTable...');
     return db.watch('''
-      SELECT photo_id FROM $TODOS_TABLE
+      SELECT photo_id FROM $todosTable
       WHERE photo_id IS NOT NULL
     ''').map((results) {
       return results.map((row) => row['photo_id'] as String).toList();

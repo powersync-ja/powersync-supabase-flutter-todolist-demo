@@ -14,7 +14,7 @@ class AttachmentsService {
 
   /// Table used for storing attachments in the attachment queue.
   get table {
-    return ATTACHMENTS_QUEUE_TABLE;
+    return attachmentsQueueTable;
   }
 
   /// Delete the attachment from the attachment queue.

@@ -44,7 +44,7 @@ void main() async {
   runApp(MyApp(loggedIn: loggedIn));
 }
 
-const defaultQuery = 'SELECT * from $TODOS_TABLE';
+const defaultQuery = 'SELECT * from $todosTable';
 
 const listsPage = ListsPage();
 const homePage = listsPage;

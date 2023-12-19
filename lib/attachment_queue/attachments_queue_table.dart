@@ -3,7 +3,7 @@ import 'package:powersync/sqlite3.dart' as sqlite;
 import 'dart:math';
 
 /// Global reference to the attachment queue table
-final String ATTACHMENTS_QUEUE_TABLE = 'queue_${_getRandomString(6)}';
+final String attachmentsQueueTable = 'queue_${_getRandomString(6)}';
 
 /// Class used to create the attachment queue table
 /// The table is local only and will not be visible in the remote database
@@ -78,7 +78,7 @@ class AttachmentsQueueTable extends Table {
       List<Index> indexes = const [],
       String? viewName})
       : super.localOnly(
-            ATTACHMENTS_QUEUE_TABLE,
+            attachmentsQueueTable,
             [
               const Column.text('filename'),
               const Column.text('local_uri'),

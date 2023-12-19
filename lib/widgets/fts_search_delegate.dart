@@ -15,7 +15,7 @@ class FtsSearchDelegate extends SearchDelegate {
         onPressed: () {
           query = '';
         },
-        icon: Icon(Icons.clear),
+        icon: const Icon(Icons.clear),
       ),
     ];
   }
@@ -26,7 +26,7 @@ class FtsSearchDelegate extends SearchDelegate {
       onPressed: () {
         close(context, null);
       },
-      icon: Icon(Icons.arrow_back),
+      icon: const Icon(Icons.arrow_back),
     );
   }
 

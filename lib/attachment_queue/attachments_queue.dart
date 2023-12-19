@@ -24,15 +24,11 @@ abstract class AbstractAttachmentQueue {
   late SyncingService syncingService;
 
   AbstractAttachmentQueue(
-      {required PowerSyncDatabase db,
-      required AbstractLocalStorageAdapter localStorage,
-      required AbstractRemoteStorageAdapter remoteStorage,
-      String attachmentDirectoryName = 'attachments',
-      performInitialSync = true})
-      : this.db = db,
-        this.localStorage = localStorage,
-        this.remoteStorage = remoteStorage,
-        this.attachmentDirectoryName = attachmentDirectoryName {
+      {required this.db,
+      required this.localStorage,
+      required this.remoteStorage,
+      this.attachmentDirectoryName = 'attachments',
+      performInitialSync = true}) {
     attachmentsService =
         AttachmentsService(db, localStorage, attachmentDirectoryName);
     syncingService = SyncingService(

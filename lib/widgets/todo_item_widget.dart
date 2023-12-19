@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:powersync_flutter_demo/app_config.dart';
-import 'package:powersync_flutter_demo/attachment_queue/attachments_queue_table.dart';
 import 'package:powersync_flutter_demo/attachments/photo_widget.dart';
 import 'package:powersync_flutter_demo/attachments/queue.dart';
 

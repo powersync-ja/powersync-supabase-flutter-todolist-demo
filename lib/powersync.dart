@@ -189,5 +189,5 @@ Future<void> openDatabase() async {
 /// Explicit sign out - clear database and log out.
 Future<void> logout() async {
   await Supabase.instance.client.auth.signOut();
-  await db.disconnectedAndClear();
+  await db.disconnectAndClear();
 }
